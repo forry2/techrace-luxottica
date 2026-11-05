@@ -239,6 +239,17 @@
   .cover-hero .big-title span { color: #5c6bc0; }
   .cover-hero .tagline { font-size: 16px; color: #7986cb; margin-bottom: 24px; }
 
+  .mini-list { list-style: none; padding: 0; margin-top: 4px; }
+  .mini-list li {
+    font-size: 12px;
+    color: #8898c8;
+    line-height: 1.5;
+    padding: 6px 0;
+    border-bottom: 1px solid #16224a;
+  }
+  .mini-list li:last-child { border-bottom: none; }
+  .mini-list li strong { color: #c5cae9; display: block; font-size: 12.5px; }
+
   .hint { text-align: center; font-size: 11px; color: #2a3460; margin-top: 10px; }
 
   @media (max-width: 600px) {
@@ -259,6 +270,7 @@
   <button onclick="showSlide(3)">④ Bob in azione</button>
   <button onclick="showSlide(4)">⑤ Sfide</button>
   <button onclick="showSlide(5)">⑥ Prossimi passi</button>
+  <button onclick="showSlide(6)">⑦ SMS2 con Bob</button>
 </div>
 
 <div class="slides">
@@ -301,7 +313,7 @@
   <div class="slide" id="s1">
     <div class="topbar">
       <span class="brand">tech RACE · IBM Bob</span>
-      <span class="slidenum">1 / 5 — Problema</span>
+      <span class="slidenum">1 / 6 — Problema</span>
     </div>
     <div class="card">
       <div class="slide-label">Il problema</div>
@@ -339,7 +351,7 @@
   <div class="slide" id="s2">
     <div class="topbar">
       <span class="brand">tech RACE · IBM Bob</span>
-      <span class="slidenum">2 / 5 — Approccio</span>
+      <span class="slidenum">2 / 6 — Approccio</span>
     </div>
     <div class="card">
       <div class="slide-label">L'approccio</div>
@@ -404,7 +416,7 @@
   <div class="slide" id="s3">
     <div class="topbar">
       <span class="brand">tech RACE · IBM Bob</span>
-      <span class="slidenum">3 / 5 — Bob in azione</span>
+      <span class="slidenum">3 / 6 — Bob in azione</span>
     </div>
     <div class="card">
       <div class="slide-label">Bob in azione</div>
@@ -446,7 +458,7 @@
   <div class="slide" id="s4">
     <div class="topbar">
       <span class="brand">tech RACE · IBM Bob</span>
-      <span class="slidenum">4 / 5 — Sfide</span>
+      <span class="slidenum">4 / 6 — Sfide</span>
     </div>
     <div class="card">
       <div class="slide-label">Le sfide</div>
@@ -488,7 +500,7 @@
   <div class="slide" id="s5">
     <div class="topbar">
       <span class="brand">tech RACE · IBM Bob</span>
-      <span class="slidenum">5 / 5 — Prossimi passi</span>
+      <span class="slidenum">5 / 6 — Prossimi passi</span>
     </div>
     <div class="card">
       <div class="slide-label">Prossimi passi</div>
@@ -536,6 +548,47 @@
     </div>
   </div>
 
+  <!-- SLIDE 6 — SMS2 CON BOB -->
+  <div class="slide" id="s6">
+    <div class="topbar">
+      <span class="brand">tech RACE · IBM Bob</span>
+      <span class="slidenum">6 / 6 — SMS2 con Bob</span>
+    </div>
+    <div class="card">
+      <div class="slide-label">Prossimi passi · SMS2 / EssiBOX</div>
+      <h1 class="slide-title">Dalla tech race<br>alla piattaforma SMS2.</h1>
+      <div class="subtitle">Lo stesso approccio applicato al prodotto EssiBOX.</div>
+      <div class="divider"></div>
+
+      <div style="margin-bottom:20px;">
+        <div class="box accent">
+          <div class="box-label">Roadmap prodotto</div>
+          <div class="box-title">AI nel prodotto EssiBOX</div>
+          <ul class="mini-list">
+            <li><strong>Evidenza GDPR continua</strong>Verifica settimanale di retention, cancellazioni e audit trace, con report per il DPO.</li>
+            <li><strong>Insight per i negozi</strong>Su <code>nightly_aggregation</code>: negozi con basso uso di biometria e passaporto miopia, con azioni suggerite.</li>
+            <li><strong>Supporto L1 agentico</strong>"Perché il CBOX non vede il paziente?" diagnosi su associazioni, hub e trace.</li>
+            <li><strong>Localizzazione EU</strong>Chiavi mancanti e traduzioni con glossario oftalmico, revisione umana.</li>
+          </ul>
+          <br>
+          <span class="tag purple">Adozione device ↑</span>
+          <span class="tag purple">Time-to-market EU ↓</span>
+        </div>
+      </div>
+
+      <div class="box" style="background:linear-gradient(135deg,#0d1a3e,#111827);border-color:#3949ab;">
+        <div class="box-label">Governance</div>
+        <div class="box-title" style="color:#9fa8da;">Velocità senza perdere il controllo su dati sanitari.</div>
+        <p>Approvazione umana prima di merge e <code>helmfile apply</code>, nessun accesso in scrittura alla produzione per gli agenti, ogni azione tracciata in Jira e Bitbucket. Nessun suggerimento clinico sul singolo paziente: gli agenti restano su delivery, operations e business.</p>
+      </div>
+
+      <div class="slide-footer">
+        <span class="team">Team Luxottica</span>
+        <span>SMS2 · Ask · Plan · Orchestrator · MCP</span>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -545,7 +598,7 @@
   }
   document.addEventListener('keydown', function(e) {
     var active = Array.from(document.querySelectorAll('.slide')).findIndex(function(s){ return s.classList.contains('active'); });
-    if (e.key === 'ArrowRight' && active < 5) showSlide(active + 1);
+    if (e.key === 'ArrowRight' && active < document.querySelectorAll('.slide').length - 1) showSlide(active + 1);
     if (e.key === 'ArrowLeft'  && active > 0) showSlide(active - 1);
   });
 </script>
