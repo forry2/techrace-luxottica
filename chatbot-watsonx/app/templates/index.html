@@ -3,488 +3,412 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Ordini — watsonx AI</title>
+  <title>WareFlow — watsonx AI</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
-      background: #f0f4f8;
-      display: flex;
-      justify-content: center;
-      align-items: flex-start;
-      min-height: 100vh;
-      padding: 20px 16px;
-    }
-
-    .layout {
-      width: 100%;
-      max-width: 1200px;
-      display: grid;
-      grid-template-columns: 1fr 400px;
-      gap: 20px;
-      align-items: start;
-    }
-
-    /* ── Pannello sinistro ──────────────────────────── */
-    .left-panel {
+      font-size: 14px;
+      line-height: 1.6;
+      background: #f0f2f5;
+      color: #1f2328;
+      height: 100vh;
       display: flex;
       flex-direction: column;
-      gap: 20px;
-    }
-
-    .card {
-      background: #ffffff;
-      border: 1px solid #e5e7eb;
-      border-radius: 12px;
       overflow: hidden;
     }
 
-    .card-header {
+    /* ── Top nav ── */
+    .topnav {
       background: #1d3557;
-      color: #ffffff;
-      padding: 14px 18px;
+      color: #fff;
+      padding: 0 16px;
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      gap: 24px;
+      height: 48px;
+      flex-shrink: 0;
+    }
+    .topnav .brand { font-weight: 700; font-size: 15px; letter-spacing: .3px; margin-right: auto; }
+    .nav-tab {
+      background: none; border: none; color: rgba(255,255,255,.7);
+      font-size: 13px; padding: 4px 10px; border-radius: 4px; cursor: pointer;
+      transition: background .15s, color .15s;
+    }
+    .nav-tab:hover  { background: rgba(255,255,255,.1); color: #fff; }
+    .nav-tab.active { background: rgba(255,255,255,.18); color: #fff; font-weight: 600; }
+
+    /* ── Main layout ── */
+    .main {
+      display: flex;
+      flex: 1;
+      min-height: 0;
+      gap: 0;
     }
 
-    .card-header h2 {
-      font-size: 15px;
-      font-weight: 600;
-      letter-spacing: 0.02em;
+    /* ── Left panel (tabs content) ── */
+    .left-panel {
+      width: 520px;
+      min-width: 320px;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      overflow-y: auto;
+      padding: 16px;
+      gap: 12px;
+      background: #f0f2f5;
     }
 
-    .card-header .badge {
-      background: rgba(255,255,255,0.2);
-      padding: 2px 9px;
-      border-radius: 20px;
-      font-size: 12px;
-    }
+    /* ── Tab pages ── */
+    .tab-page { display: none; flex-direction: column; gap: 12px; }
+    .tab-page.active { display: flex; }
 
-    .card-body {
-      padding: 18px;
+    /* ── Card ── */
+    .card {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      overflow: hidden;
     }
-
-    /* ── Tabella ordini ─────────────────────────────── */
-    .orders-table-wrap {
-      overflow-x: auto;
+    .card-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #fafbfc;
     }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 13px;
+    .card-header h2 { font-size: 14px; font-weight: 600; flex: 1; }
+    .badge {
+      background: #1d3557; color: #fff; border-radius: 10px;
+      padding: 1px 7px; font-size: 11px; font-weight: 600;
     }
+    .badge.green { background: #16a34a; }
+    .badge.yellow { background: #ca8a04; }
+    .card-body { padding: 16px; }
 
+    /* ── Tables ── */
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
     thead th {
-      text-align: left;
-      padding: 8px 10px;
-      border-bottom: 2px solid #e5e7eb;
-      color: #57606a;
-      font-weight: 600;
-      white-space: nowrap;
+      text-align: left; font-size: 11px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .5px; color: #57606a;
+      padding: 6px 10px; border-bottom: 1px solid #e5e7eb;
     }
-
-    tbody tr {
-      border-bottom: 1px solid #f1f5f9;
-      transition: background 0.1s;
-    }
-
+    tbody tr { border-bottom: 1px solid #f3f4f6; }
     tbody tr:last-child { border-bottom: none; }
     tbody tr:hover { background: #f7f8fa; }
+    tbody td { padding: 8px 10px; font-size: 13px; vertical-align: middle; }
+    .muted { color: #57606a; font-size: 12px; }
+    .empty-state { text-align: center; color: #57606a; padding: 20px; font-size: 13px; }
 
-    tbody td {
-      padding: 9px 10px;
-      color: #1f2328;
-      vertical-align: top;
-    }
-
+    /* ── Status badges ── */
     .status-badge {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 20px;
-      font-size: 11px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
+      display: inline-block; border-radius: 4px; padding: 2px 7px;
+      font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .3px;
     }
+    .status-draft     { background: #fef9c3; color: #713f12; }
+    .status-confirmed { background: #dcfce7; color: #14532d; }
+    .status-cancelled { background: #fee2e2; color: #7f1d1d; }
+    .status-pending   { background: #dbeafe; color: #1e3a8a; }
 
-    .status-draft      { background: #fef9c3; color: #713f12; }
-    .status-confirmed  { background: #dcfce7; color: #14532d; }
-    .status-cancelled  { background: #fee2e2; color: #7f1d1d; }
-
-    .order-lines-cell { color: #57606a; font-size: 12px; }
-
-    .empty-state {
-      text-align: center;
-      padding: 32px 0;
-      color: #57606a;
-      font-size: 14px;
+    /* ── Action buttons in table ── */
+    .btn-confirm, .btn-cancel {
+      border: none; border-radius: 4px; padding: 3px 8px; font-size: 11px;
+      font-weight: 600; cursor: pointer; margin-right: 4px; transition: opacity .15s;
     }
+    .btn-confirm { background: #16a34a; color: #fff; }
+    .btn-confirm:hover { opacity: .85; }
+    .btn-cancel  { background: #dc2626; color: #fff; }
+    .btn-cancel:hover  { opacity: .85; }
 
-    /* ── Modulo ordine ──────────────────────────────── */
-    .form-grid {
-      display: grid;
-      gap: 14px;
+    /* ── Stock inline controls ── */
+    .stock-row-actions { display: flex; align-items: center; gap: 6px; }
+    .qty-input {
+      width: 70px; padding: 3px 6px; border: 1px solid #d1d5db;
+      border-radius: 4px; font-size: 12px;
     }
-
-    .form-group {
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
+    .btn-restock {
+      border: none; border-radius: 4px; padding: 3px 8px; font-size: 11px;
+      font-weight: 600; background: #1d3557; color: #fff; cursor: pointer;
     }
+    .btn-restock:hover { opacity: .85; }
 
-    label {
-      font-size: 13px;
-      font-weight: 600;
-      color: #374151;
-    }
-
+    /* ── Form ── */
+    .form-grid { display: flex; flex-direction: column; gap: 10px; }
+    .form-group { display: flex; flex-direction: column; gap: 4px; }
+    label { font-size: 12px; font-weight: 600; color: #57606a; }
     input[type="text"], input[type="number"], select {
-      border: 1px solid #d1d5db;
-      border-radius: 7px;
-      padding: 9px 12px;
-      font-size: 14px;
-      font-family: inherit;
-      outline: none;
-      transition: border-color 0.15s;
-      width: 100%;
+      padding: 7px 10px; border: 1px solid #d1d5db; border-radius: 6px;
+      font-size: 13px; width: 100%; background: #fff;
+      transition: border-color .15s;
     }
+    input:focus, select:focus { outline: none; border-color: #1d3557; }
 
-    input:focus, select:focus { border-color: #1d3557; }
-
-    .lines-section {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .lines-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
+    .lines-section { display: flex; flex-direction: column; gap: 6px; }
+    .lines-header { display: flex; align-items: center; justify-content: space-between; }
     .lines-header label { margin: 0; }
-
     .order-line-row {
-      display: grid;
-      grid-template-columns: 1fr 90px 32px;
-      gap: 8px;
+      display: grid; grid-template-columns: 1fr 80px 32px; gap: 6px;
       align-items: center;
     }
-
     .btn-icon {
-      background: #fee2e2;
-      color: #b91c1c;
-      border: none;
-      border-radius: 6px;
-      width: 32px;
-      height: 32px;
-      cursor: pointer;
-      font-size: 16px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: background 0.15s;
+      background: #fee2e2; color: #dc2626; border: none; border-radius: 4px;
+      width: 28px; height: 28px; font-size: 16px; cursor: pointer; line-height: 1;
     }
-
     .btn-icon:hover { background: #fecaca; }
 
     .btn-secondary {
-      background: #f1f5f9;
-      color: #1d3557;
-      border: 1px solid #d1d5db;
-      border-radius: 7px;
-      padding: 7px 14px;
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.15s;
+      background: #f1f5f9; color: #374151; border: 1px solid #e2e8f0;
+      border-radius: 6px; padding: 5px 12px; font-size: 12px; font-weight: 600;
+      cursor: pointer; transition: background .15s;
     }
-
     .btn-secondary:hover { background: #e2e8f0; }
 
     .btn-primary {
-      background: #1d3557;
-      color: #ffffff;
-      border: none;
-      border-radius: 7px;
-      padding: 10px 20px;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.15s;
-      width: 100%;
+      background: #1d3557; color: #fff; border: none;
+      border-radius: 6px; padding: 9px 18px; font-size: 13px; font-weight: 600;
+      cursor: pointer; width: 100%; transition: background .15s;
     }
-
     .btn-primary:hover:not(:disabled) { background: #274472; }
-    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
 
-    .form-actions {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-    }
+    .form-actions { margin-top: 6px; }
 
     .alert {
-      padding: 10px 14px;
-      border-radius: 7px;
-      font-size: 13px;
-      display: none;
+      display: none; border-radius: 6px; padding: 8px 12px;
+      font-size: 12px; font-weight: 500; margin-top: 6px;
     }
-
     .alert.success { background: #dcfce7; color: #14532d; display: block; }
     .alert.error   { background: #fee2e2; color: #7f1d1d; display: block; }
 
-    /* ── Chat ───────────────────────────────────────── */
+    /* ── Chat panel ── */
     .chat-container {
-      background: #ffffff;
-      border: 1px solid #e5e7eb;
-      border-radius: 12px;
-      display: flex;
-      flex-direction: column;
-      height: 90vh;
-      max-height: 820px;
-      position: sticky;
-      top: 20px;
-      overflow: hidden;
+      flex: 1; display: flex; flex-direction: column; min-width: 0;
+      background: #fff; border-left: 1px solid #e5e7eb;
     }
-
     .chat-header {
-      background: #1d3557;
-      color: #ffffff;
-      padding: 14px 18px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
+      padding: 12px 16px; border-bottom: 1px solid #e5e7eb;
+      display: flex; align-items: center; gap: 8px; background: #fafbfc;
       flex-shrink: 0;
     }
-
     .chat-header .dot {
-      width: 10px;
-      height: 10px;
-      background: #4ade80;
-      border-radius: 50%;
-      flex-shrink: 0;
+      width: 8px; height: 8px; border-radius: 50%; background: #16a34a;
+      box-shadow: 0 0 0 2px #dcfce7;
     }
-
-    .chat-header h2 {
-      font-size: 15px;
-      font-weight: 600;
-      letter-spacing: 0.02em;
-    }
-
-    .chat-header span {
-      font-size: 11px;
-      opacity: 0.7;
-      margin-left: auto;
-    }
-
+    .chat-header h2 { font-size: 14px; font-weight: 600; flex: 1; }
+    .chat-header span { font-size: 11px; color: #57606a; }
     .messages {
-      flex: 1;
-      overflow-y: auto;
-      padding: 18px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
+      flex: 1; overflow-y: auto; padding: 16px;
+      display: flex; flex-direction: column; gap: 10px; min-height: 0;
     }
-
     .message {
-      max-width: 85%;
-      padding: 9px 13px;
-      border-radius: 10px;
-      font-size: 13px;
-      line-height: 1.55;
-      white-space: pre-wrap;
-      word-break: break-word;
+      max-width: 80%; padding: 10px 14px; border-radius: 12px;
+      font-size: 13px; line-height: 1.5; word-break: break-word;
     }
-
-    .message.user {
-      background: #1d3557;
-      color: #ffffff;
-      align-self: flex-end;
-      border-bottom-right-radius: 3px;
-    }
-
-    .message.assistant {
-      background: #f1f5f9;
-      color: #1f2328;
-      align-self: flex-start;
-      border-bottom-left-radius: 3px;
-    }
-
-    .message.error {
-      background: #fee2e2;
-      color: #b91c1c;
-      align-self: flex-start;
-      font-size: 12px;
-    }
+    .message.user      { background: #1d3557; color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
+    .message.assistant { background: #f1f5f9; color: #1f2328; align-self: flex-start; border-bottom-left-radius: 4px; }
+    .message.error     { background: #fee2e2; color: #7f1d1d; align-self: flex-start; font-size: 12px; }
 
     .typing-indicator {
-      display: none;
-      align-self: flex-start;
-      background: #f1f5f9;
-      border-radius: 10px;
-      border-bottom-left-radius: 3px;
-      padding: 11px 14px;
-      gap: 5px;
-      align-items: center;
+      display: none; gap: 4px; align-items: center;
+      background: #f1f5f9; border-radius: 12px; border-bottom-left-radius: 4px;
+      padding: 10px 14px; align-self: flex-start;
     }
-
     .typing-indicator.visible { display: flex; }
-
     .typing-indicator span {
-      width: 7px;
-      height: 7px;
-      background: #94a3b8;
-      border-radius: 50%;
-      animation: bounce 1.2s infinite ease-in-out;
+      width: 6px; height: 6px; background: #9ca3af; border-radius: 50%;
+      animation: bounce .8s infinite;
     }
-
-    .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
-    .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
-
+    .typing-indicator span:nth-child(2) { animation-delay: .2s; }
+    .typing-indicator span:nth-child(3) { animation-delay: .4s; }
     @keyframes bounce {
       0%, 80%, 100% { transform: translateY(0); }
-      40% { transform: translateY(-6px); }
+      40%           { transform: translateY(-6px); }
     }
 
     .input-area {
-      padding: 12px 14px;
-      border-top: 1px solid #e5e7eb;
-      display: flex;
-      gap: 9px;
-      background: #ffffff;
-      flex-shrink: 0;
+      padding: 12px; border-top: 1px solid #e5e7eb;
+      display: flex; gap: 8px; align-items: flex-end; flex-shrink: 0;
     }
-
     #user-input {
-      flex: 1;
-      resize: none;
-      border: 1px solid #d1d5db;
-      border-radius: 7px;
-      padding: 9px 12px;
-      font-size: 13px;
-      font-family: inherit;
-      outline: none;
-      line-height: 1.5;
-      max-height: 100px;
-      overflow-y: auto;
-      transition: border-color 0.15s;
+      flex: 1; resize: none; padding: 8px 12px;
+      border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px;
+      line-height: 1.5; font-family: inherit; min-height: 38px; max-height: 100px;
+      overflow-y: auto; transition: border-color .15s;
     }
-
-    #user-input:focus { border-color: #1d3557; }
-
+    #user-input:focus { outline: none; border-color: #1d3557; }
     #send-btn {
-      background: #1d3557;
-      color: #ffffff;
-      border: none;
-      border-radius: 7px;
-      padding: 0 16px;
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.15s;
-      white-space: nowrap;
+      background: #1d3557; color: #fff; border: none; border-radius: 8px;
+      padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer;
+      height: 38px; white-space: nowrap; transition: background .15s;
     }
-
     #send-btn:hover:not(:disabled) { background: #274472; }
-    #send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    #send-btn:disabled { opacity: .5; cursor: not-allowed; }
 
     .messages::-webkit-scrollbar { width: 4px; }
     .messages::-webkit-scrollbar-track { background: transparent; }
     .messages::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 2px; }
 
-    @media (max-width: 800px) {
-      .layout { grid-template-columns: 1fr; }
-      .chat-container { height: 60vh; position: static; }
+    @media (max-width: 900px) {
+      .left-panel { width: 100%; }
+      .chat-container { display: none; }
     }
   </style>
 </head>
 <body>
-  <div class="layout">
 
-    <!-- ── Pannello sinistro: lista + modulo ───────── -->
+  <!-- Top navigation -->
+  <nav class="topnav">
+    <span class="brand">🏭 WareFlow</span>
+    <button class="nav-tab active" onclick="showTab('orders-tab', this)">Ordini</button>
+    <button class="nav-tab" onclick="showTab('warehouses-tab', this)">Magazzini</button>
+    <button class="nav-tab" onclick="showTab('stock-tab', this)">Stock</button>
+    <button class="nav-tab" onclick="showTab('shipments-tab', this)">Spedizioni</button>
+  </nav>
+
+  <div class="main">
+
+    <!-- ── Left panel ── -->
     <div class="left-panel">
 
-      <!-- Lista ordini -->
-      <div class="card">
-        <div class="card-header">
-          <h2>Ordini</h2>
-          <span class="badge" id="orders-count">0</span>
-        </div>
-        <div class="card-body">
-          <div class="orders-table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Cliente</th>
-                  <th>Righe</th>
-                  <th>Stato</th>
-                  <th>Data</th>
-                </tr>
-              </thead>
-              <tbody id="orders-tbody">
-                <tr><td colspan="5" class="empty-state">Caricamento…</td></tr>
-              </tbody>
-            </table>
+      <!-- ══ ORDINI TAB ══ -->
+      <div id="orders-tab" class="tab-page active">
+
+        <!-- Lista ordini -->
+        <div class="card">
+          <div class="card-header">
+            <h2>Ordini</h2>
+            <span class="badge" id="orders-count">0</span>
+          </div>
+          <div class="card-body" style="padding:0">
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Cliente</th>
+                    <th>Righe</th>
+                    <th>Stato</th>
+                    <th>Azioni</th>
+                  </tr>
+                </thead>
+                <tbody id="orders-tbody">
+                  <tr><td colspan="5" class="empty-state">Caricamento…</td></tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- Modulo nuovo ordine -->
-      <div class="card">
-        <div class="card-header">
-          <h2>Nuovo ordine</h2>
-        </div>
-        <div class="card-body">
-          <div class="form-grid">
-
-            <div class="form-group">
-              <label for="customer-name">Nome cliente</label>
-              <input type="text" id="customer-name" placeholder="es. Mario Rossi" autocomplete="off" />
-            </div>
-
-            <div class="lines-section">
-              <div class="lines-header">
-                <label>Righe ordine</label>
-                <button class="btn-secondary" id="add-line-btn" type="button">+ Aggiungi riga</button>
+        <!-- Crea ordine -->
+        <div class="card">
+          <div class="card-header"><h2>Nuovo ordine</h2></div>
+          <div class="card-body">
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="customer-name">Nome cliente</label>
+                <input type="text" id="customer-name" placeholder="es. Mario Rossi" autocomplete="off" />
               </div>
-              <div id="order-lines">
-                <!-- righe dinamiche -->
+              <div class="lines-section">
+                <div class="lines-header">
+                  <label>Righe ordine</label>
+                  <button class="btn-secondary" id="add-line-btn" type="button">+ Aggiungi riga</button>
+                </div>
+                <div id="order-lines"></div>
               </div>
             </div>
-
             <div id="form-alert" class="alert"></div>
-
             <div class="form-actions">
               <button class="btn-primary" id="submit-order-btn" type="button">Crea ordine</button>
             </div>
-
           </div>
         </div>
-      </div>
 
-    </div>
+      </div><!-- /orders-tab -->
 
-    <!-- ── Chat ───────────────────────────────────── -->
+      <!-- ══ MAGAZZINI TAB ══ -->
+      <div id="warehouses-tab" class="tab-page">
+        <div class="card">
+          <div class="card-header">
+            <h2>Magazzini</h2>
+            <span class="badge" id="warehouses-count">0</span>
+          </div>
+          <div class="card-body" style="padding:0">
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr><th>#</th><th>Nome</th><th>Città</th></tr>
+                </thead>
+                <tbody id="warehouses-tbody">
+                  <tr><td colspan="3" class="empty-state">Caricamento…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div><!-- /warehouses-tab -->
+
+      <!-- ══ STOCK TAB ══ -->
+      <div id="stock-tab" class="tab-page">
+        <div class="card">
+          <div class="card-header">
+            <h2>Stock disponibile</h2>
+          </div>
+          <div class="card-body" style="padding:0">
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr><th>SKU</th><th>Quantità</th><th>Rifornimento</th></tr>
+                </thead>
+                <tbody id="stock-tbody">
+                  <tr><td colspan="3" class="empty-state">Caricamento…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div id="stock-alert" class="alert"></div>
+      </div><!-- /stock-tab -->
+
+      <!-- ══ SPEDIZIONI TAB ══ -->
+      <div id="shipments-tab" class="tab-page">
+        <div class="card">
+          <div class="card-header">
+            <h2>Spedizioni</h2>
+            <span class="badge" id="shipments-count">0</span>
+          </div>
+          <div class="card-body" style="padding:0">
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr><th>#</th><th>Ordine</th><th>Magazzino</th><th>Tracking</th><th>Stato</th></tr>
+                </thead>
+                <tbody id="shipments-tbody">
+                  <tr><td colspan="5" class="empty-state">Caricamento…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div><!-- /shipments-tab -->
+
+    </div><!-- /left-panel -->
+
+    <!-- ── Chat panel ── -->
     <div class="chat-container">
       <div class="chat-header">
         <div class="dot"></div>
         <h2>Assistente watsonx AI</h2>
         <span>openai/gpt-oss-120b</span>
       </div>
-
       <div class="messages" id="messages">
-        <div class="message assistant">Ciao! Sono il tuo assistente powered by IBM watsonx AI. Posso aiutarti a gestire gli ordini o rispondere a qualsiasi domanda.</div>
+        <div class="message assistant">Ciao! Sono il tuo assistente WareFlow powered by IBM watsonx AI. Posso aiutarti a gestire ordini, stock, magazzini e spedizioni.</div>
         <div class="typing-indicator" id="typing">
           <span></span><span></span><span></span>
         </div>
       </div>
-
       <div class="input-area">
         <textarea
           id="user-input"
@@ -495,28 +419,49 @@
       </div>
     </div>
 
-  </div>
+  </div><!-- /main -->
 
   <script>
     // ── SKU disponibili ──────────────────────────────────────────────────────
     const AVAILABLE_SKUS = ['WIDGET-1', 'WIDGET-2', 'PALLET-BOX'];
 
-    // ── Lista ordini ─────────────────────────────────────────────────────────
+    // ── Tab navigation ───────────────────────────────────────────────────────
+    function showTab(tabId, btn) {
+      document.querySelectorAll('.tab-page').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+      document.getElementById(tabId).classList.add('active');
+      btn.classList.add('active');
+      // lazy load
+      if (tabId === 'warehouses-tab') loadWarehouses();
+      if (tabId === 'stock-tab')      loadStock();
+      if (tabId === 'shipments-tab')  loadShipments();
+    }
+
+    // ── Utilities ────────────────────────────────────────────────────────────
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function statusBadge(status) {
+      const cls = {
+        DRAFT: 'status-draft', CONFIRMED: 'status-confirmed',
+        CANCELLED: 'status-cancelled', PENDING: 'status-pending'
+      };
+      return `<span class="status-badge ${cls[status] || ''}">${escapeHtml(status)}</span>`;
+    }
+
+    // ── Ordini ───────────────────────────────────────────────────────────────
     async function loadOrders() {
       try {
         const res = await fetch('/orders');
         if (!res.ok) throw new Error('Errore caricamento ordini');
-        const orders = await res.json();
-        renderOrders(orders);
+        renderOrders(await res.json());
       } catch (e) {
         document.getElementById('orders-tbody').innerHTML =
-          `<tr><td colspan="5" class="empty-state" style="color:#b91c1c">${e.message}</td></tr>`;
+          `<tr><td colspan="5" class="empty-state" style="color:#b91c1c">${escapeHtml(e.message)}</td></tr>`;
       }
-    }
-
-    function statusBadge(status) {
-      const cls = { DRAFT: 'status-draft', CONFIRMED: 'status-confirmed', CANCELLED: 'status-cancelled' };
-      return `<span class="status-badge ${cls[status] || ''}">${status}</span>`;
     }
 
     function renderOrders(orders) {
@@ -527,29 +472,46 @@
         return;
       }
       tbody.innerHTML = orders.map(o => {
-        const linesText = (o.lines || [])
-          .map(l => `${l.sku} ×${l.quantity}`)
-          .join(', ') || '—';
-        const date = o.created_at ? o.created_at.slice(0, 16).replace('T', ' ') : '—';
+        const linesText = (o.lines || []).map(l => `${l.sku} ×${l.quantity}`).join(', ') || '—';
+        const actions = o.status === 'DRAFT'
+          ? `<button class="btn-confirm" onclick="confirmOrder(${o.id})">✓ Conferma</button>
+             <button class="btn-cancel"  onclick="cancelOrder(${o.id})">✕ Annulla</button>`
+          : '—';
         return `<tr>
           <td><strong>#${o.id}</strong></td>
           <td>${escapeHtml(o.customer_name)}</td>
-          <td class="order-lines-cell">${escapeHtml(linesText)}</td>
+          <td class="muted">${escapeHtml(linesText)}</td>
           <td>${statusBadge(o.status)}</td>
-          <td style="white-space:nowrap;color:#57606a;font-size:12px">${date}</td>
+          <td style="white-space:nowrap">${actions}</td>
         </tr>`;
       }).join('');
     }
 
-    function escapeHtml(str) {
-      return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
+    async function confirmOrder(id) {
+      if (!confirm(`Confermare l'ordine #${id}? Lo stock verrà scalato.`)) return;
+      try {
+        const res = await fetch(`/orders/${id}/confirm`, { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) { alert(`Errore: ${data.detail || res.statusText}`); return; }
+        showAlert('form-alert', 'success', `Ordine #${id} confermato! Tracking: ${data.shipment?.tracking_code || '—'}`);
+        await loadOrders();
+        await loadShipments();
+        await loadStock();
+      } catch (e) { alert(`Errore: ${e.message}`); }
     }
 
-    // ── Modulo ordine ────────────────────────────────────────────────────────
+    async function cancelOrder(id) {
+      if (!confirm(`Annullare l'ordine #${id}?`)) return;
+      try {
+        const res = await fetch(`/orders/${id}/cancel`, { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) { alert(`Errore: ${data.detail || res.statusText}`); return; }
+        showAlert('form-alert', 'success', `Ordine #${id} annullato.`);
+        await loadOrders();
+      } catch (e) { alert(`Errore: ${e.message}`); }
+    }
+
+    // ── Form nuovo ordine ────────────────────────────────────────────────────
     let lineCount = 0;
 
     function addLine(sku = '', qty = 1) {
@@ -575,33 +537,29 @@
     }
 
     function getLines() {
-      const rows = document.querySelectorAll('#order-lines .order-line-row');
-      return Array.from(rows).map(row => ({
+      return Array.from(document.querySelectorAll('#order-lines .order-line-row')).map(row => ({
         sku:      row.querySelector('[data-field="sku"]').value,
         quantity: parseInt(row.querySelector('[data-field="qty"]').value, 10) || 1,
       }));
     }
 
-    function showAlert(type, msg) {
-      const el = document.getElementById('form-alert');
+    function showAlert(elId, type, msg) {
+      const el = document.getElementById(elId);
       el.className = `alert ${type}`;
       el.textContent = msg;
-      setTimeout(() => { el.className = 'alert'; el.textContent = ''; }, 4000);
+      setTimeout(() => { el.className = 'alert'; el.textContent = ''; }, 5000);
     }
 
-    // ── Popolamento form dai dati strutturati restituiti dal backend ──────────
     function applyFormData(formData) {
       if (!formData) return;
-      if (formData.customer_name) {
-        document.getElementById('customer-name').value = formData.customer_name;
-      }
+      if (formData.customer_name) document.getElementById('customer-name').value = formData.customer_name;
       if (Array.isArray(formData.lines) && formData.lines.length > 0) {
         document.getElementById('order-lines').innerHTML = '';
         lineCount = 0;
         formData.lines.forEach(l => addLine(l.sku, l.quantity));
       }
       if (formData.customer_name || (formData.lines && formData.lines.length > 0)) {
-        showAlert('success', 'Form compilato dall\'AI. Verifica e clicca "Crea ordine".');
+        showAlert('form-alert', 'success', 'Form compilato dall\'AI. Verifica e clicca "Crea ordine".');
       }
     }
 
@@ -609,14 +567,12 @@
 
     document.getElementById('submit-order-btn').addEventListener('click', async () => {
       const customerName = document.getElementById('customer-name').value.trim();
-      if (!customerName) { showAlert('error', 'Inserisci il nome del cliente.'); return; }
+      if (!customerName) { showAlert('form-alert', 'error', 'Inserisci il nome del cliente.'); return; }
       const lines = getLines();
-      if (!lines.length) { showAlert('error', 'Aggiungi almeno una riga ordine.'); return; }
+      if (!lines.length) { showAlert('form-alert', 'error', 'Aggiungi almeno una riga ordine.'); return; }
 
       const btn = document.getElementById('submit-order-btn');
-      btn.disabled = true;
-      btn.textContent = 'Creazione…';
-
+      btn.disabled = true; btn.textContent = 'Creazione…';
       try {
         const res = await fetch('/orders', {
           method: 'POST',
@@ -628,25 +584,107 @@
           throw new Error(err.detail || 'Errore sconosciuto');
         }
         const order = await res.json();
-        showAlert('success', `Ordine #${order.id} creato con successo!`);
+        showAlert('form-alert', 'success', `Ordine #${order.id} creato con successo!`);
         document.getElementById('customer-name').value = '';
         document.getElementById('order-lines').innerHTML = '';
-        lineCount = 0;
-        addLine();
+        lineCount = 0; addLine();
         await loadOrders();
       } catch (e) {
-        showAlert('error', `Errore: ${e.message}`);
+        showAlert('form-alert', 'error', `Errore: ${e.message}`);
       } finally {
-        btn.disabled = false;
-        btn.textContent = 'Crea ordine';
+        btn.disabled = false; btn.textContent = 'Crea ordine';
       }
     });
 
-    // Riga iniziale nel modulo
-    addLine();
+    // ── Magazzini ────────────────────────────────────────────────────────────
+    async function loadWarehouses() {
+      try {
+        const res = await fetch('/warehouses');
+        if (!res.ok) throw new Error('Errore caricamento magazzini');
+        const whs = await res.json();
+        document.getElementById('warehouses-count').textContent = whs.length;
+        const tbody = document.getElementById('warehouses-tbody');
+        if (!whs.length) { tbody.innerHTML = '<tr><td colspan="3" class="empty-state">Nessun magazzino</td></tr>'; return; }
+        tbody.innerHTML = whs.map(w => `
+          <tr>
+            <td><strong>#${w.id}</strong></td>
+            <td>${escapeHtml(w.name)}</td>
+            <td>${escapeHtml(w.city)}</td>
+          </tr>`).join('');
+      } catch (e) {
+        document.getElementById('warehouses-tbody').innerHTML =
+          `<tr><td colspan="3" class="empty-state" style="color:#b91c1c">${escapeHtml(e.message)}</td></tr>`;
+      }
+    }
 
-    // Carica ordini all'avvio
-    loadOrders();
+    // ── Stock ────────────────────────────────────────────────────────────────
+    async function loadStock() {
+      try {
+        const tbody = document.getElementById('stock-tbody');
+        const rows = await Promise.all(AVAILABLE_SKUS.map(async sku => {
+          const res = await fetch(`/stock/${encodeURIComponent(sku)}`);
+          return res.ok ? await res.json() : { sku, quantity: '?' };
+        }));
+        tbody.innerHTML = rows.map(s => {
+          const qty = typeof s.quantity === 'number' ? s.quantity : s.quantity;
+          const badgeCls = qty === '?' ? '' : qty === 0 ? 'red' : qty < 50 ? 'yellow' : 'green';
+          return `<tr>
+            <td><strong>${escapeHtml(s.sku)}</strong></td>
+            <td><span class="badge ${badgeCls}" style="font-size:12px">${qty}</span></td>
+            <td>
+              <div class="stock-row-actions">
+                <input class="qty-input" type="number" min="1" value="100" id="restock-qty-${escapeHtml(s.sku)}" />
+                <button class="btn-restock" onclick="doRestock('${escapeHtml(s.sku)}')">+ Rifornisci</button>
+              </div>
+            </td>
+          </tr>`;
+        }).join('');
+      } catch (e) {
+        document.getElementById('stock-tbody').innerHTML =
+          `<tr><td colspan="3" class="empty-state" style="color:#b91c1c">${escapeHtml(e.message)}</td></tr>`;
+      }
+    }
+
+    async function doRestock(sku) {
+      const qtyEl = document.getElementById(`restock-qty-${sku}`);
+      const qty = parseInt(qtyEl?.value, 10) || 0;
+      try {
+        const res = await fetch(`/stock/${encodeURIComponent(sku)}/restock`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ quantity: qty }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || res.statusText);
+        showAlert('stock-alert', 'success', `${sku}: stock aggiornato a ${data.quantity} unità.`);
+        await loadStock();
+      } catch (e) {
+        showAlert('stock-alert', 'error', `Errore: ${e.message}`);
+      }
+    }
+
+    // ── Spedizioni ───────────────────────────────────────────────────────────
+    async function loadShipments() {
+      try {
+        const res = await fetch('/shipments');
+        if (!res.ok) throw new Error('Errore caricamento spedizioni');
+        const ships = await res.json();
+        document.getElementById('shipments-count').textContent = ships.length;
+        const tbody = document.getElementById('shipments-tbody');
+        if (!ships.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Nessuna spedizione</td></tr>'; return; }
+        tbody.innerHTML = ships.map(s => `
+          <tr>
+            <td><strong>#${s.id}</strong></td>
+            <td>#${s.order_id}</td>
+            <td>#${s.warehouse_id}</td>
+            <td class="muted" style="font-family:monospace">${escapeHtml(s.tracking_code)}</td>
+            <td>${statusBadge(s.status)}</td>
+          </tr>`).join('');
+      } catch (e) {
+        document.getElementById('shipments-tbody').innerHTML =
+          `<tr><td colspan="5" class="empty-state" style="color:#b91c1c">${escapeHtml(e.message)}</td></tr>`;
+      }
+    }
 
     // ── Chat watsonx ─────────────────────────────────────────────────────────
     const messagesEl = document.getElementById('messages');
@@ -655,9 +693,7 @@
     const typingEl   = document.getElementById('typing');
     const history    = [];
 
-    function scrollToBottom() {
-      messagesEl.scrollTop = messagesEl.scrollHeight;
-    }
+    function scrollToBottom() { messagesEl.scrollTop = messagesEl.scrollHeight; }
 
     function addMessage(role, content) {
       const div = document.createElement('div');
@@ -677,50 +713,50 @@
     async function sendMessage() {
       const text = inputEl.value.trim();
       if (!text) return;
-
-      inputEl.value = '';
-      inputEl.style.height = 'auto';
+      inputEl.value = ''; inputEl.style.height = 'auto';
       addMessage('user', text);
       history.push({ role: 'user', content: text });
       setLoading(true);
-
       try {
         const res = await fetch('/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ messages: history }),
         });
-
         if (!res.ok) {
           const err = await res.json().catch(() => ({ detail: res.statusText }));
           throw new Error(err.detail || 'Errore sconosciuto');
         }
-
         const data = await res.json();
         history.push({ role: 'assistant', content: data.reply });
         addMessage('assistant', data.reply);
-        applyFormData(data.form_data);
+        if (data.form_data) {
+          // Switcha alla tab ordini e popola il form
+          document.querySelectorAll('.tab-page').forEach(p => p.classList.remove('active'));
+          document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+          document.getElementById('orders-tab').classList.add('active');
+          document.querySelector('.nav-tab').classList.add('active');
+          applyFormData(data.form_data);
+        }
       } catch (err) {
         addMessage('error', `Errore: ${err.message}`);
       } finally {
-        setLoading(false);
-        inputEl.focus();
+        setLoading(false); inputEl.focus();
       }
     }
 
     sendBtn.addEventListener('click', sendMessage);
-
     inputEl.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        sendMessage();
-      }
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
     });
-
     inputEl.addEventListener('input', () => {
       inputEl.style.height = 'auto';
       inputEl.style.height = Math.min(inputEl.scrollHeight, 100) + 'px';
     });
+
+    // ── Inizializzazione ─────────────────────────────────────────────────────
+    addLine();
+    loadOrders();
   </script>
 </body>
 </html>
