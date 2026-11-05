@@ -98,7 +98,7 @@ graph TD
 Schema delle entità persistite in SQLite e relazioni tra di esse.
 
 ```mermaid
-erDiagram
+**erDiagram**
     warehouses {
         int id PK
         text name
