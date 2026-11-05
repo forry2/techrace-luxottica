@@ -1,5 +1,3 @@
-import time
-
 from app import db, shipping, warehouse
 from app.notifications import notify_customer
 from app.utils import log_event
@@ -61,17 +59,10 @@ def confirm_order(order_id):
         raise StockError(f"order {order_id} is already {order['status']}")
 
     for line in order["lines"]:
-        current = warehouse.get_stock(line["sku"])
-        if current < line["quantity"]:
-            raise StockError(f"not enough stock for {line['sku']}: have {current}, need {line['quantity']}")
-
-        # Simulates the per-line processing that happens here in production
-        # (discount lookups, tax calculation, audit logging) - just long
-        # enough for another thread confirming a different order for the
-        # same SKU to run its own check in between.
-        time.sleep(0.01)
-
-        warehouse.decrement_stock(line["sku"], current, line["quantity"])
+        try:
+            warehouse.check_and_decrement_stock(line["sku"], line["quantity"])
+        except ValueError as e:
+            raise StockError(str(e))
 
     db.execute("UPDATE orders SET status = 'CONFIRMED' WHERE id = ?", (order_id,))
 
