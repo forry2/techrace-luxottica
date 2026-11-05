@@ -33,12 +33,22 @@ def get_stock(sku):
 
 
 def check_and_decrement_stock(sku, quantity):
-    """Atomically verify availability and decrement. Raises ValueError if insufficient."""
+    """Atomically verify availability and decrement both the in-memory cache and the DB."""
     with _stock_lock:
         current = _STOCK_CACHE.get(sku, 0)
         if current < quantity:
             raise ValueError(f"not enough stock for {sku}: have {current}, need {quantity}")
         _STOCK_CACHE[sku] = current - quantity
+        # Persist the decrement to the DB so restarts and direct DB reads stay consistent.
+        # Apply the full reduction to the warehouse that holds the most stock for this SKU
+        # (same warehouse chosen by get_warehouse_for_sku / create_shipment_for_line).
+        db.execute(
+            """UPDATE stock SET quantity = MAX(0, quantity - ?)
+               WHERE sku = ? AND warehouse_id = (
+                   SELECT warehouse_id FROM stock WHERE sku = ? ORDER BY quantity DESC LIMIT 1
+               )""",
+            (quantity, sku, sku),
+        )
         log_event("stock_decremented", sku=sku, quantity=quantity, remaining=_STOCK_CACHE[sku])
 
 
@@ -52,3 +62,12 @@ def decrement_stock(sku, quantity_before, quantity):
 def restock(sku, quantity):
     with _stock_lock:
         _STOCK_CACHE[sku] = _STOCK_CACHE.get(sku, 0) + quantity
+        # Persist restock to the DB on the warehouse that already holds this SKU
+        # (or the first one found), so the value survives a restart.
+        db.execute(
+            """UPDATE stock SET quantity = quantity + ?
+               WHERE sku = ? AND warehouse_id = (
+                   SELECT warehouse_id FROM stock WHERE sku = ? LIMIT 1
+               )""",
+            (quantity, sku, sku),
+        )

@@ -76,3 +76,51 @@ def test_get_reserved_quantity_empty():
     # No DRAFT orders exist yet, so reserved qty is 0
     qty = get_reserved_quantity("WIDGET-1")
     assert qty == 0
+
+
+# ---------------------------------------------------------------------------
+# Regression tests — DB persistence of stock changes (fix for lost-update bug)
+# ---------------------------------------------------------------------------
+
+def test_check_and_decrement_stock_persists_to_db():
+    """After check_and_decrement_stock the DB total for the SKU must decrease."""
+    sku = "WIDGET-1"
+    db_before = sum(
+        r["quantity"] for r in db_module.query_all("SELECT quantity FROM stock WHERE sku = ?", (sku,))
+    )
+    warehouse_module.check_and_decrement_stock(sku, 5)
+    db_after = sum(
+        r["quantity"] for r in db_module.query_all("SELECT quantity FROM stock WHERE sku = ?", (sku,))
+    )
+    assert db_after == db_before - 5, (
+        f"DB not updated after decrement: expected {db_before - 5}, got {db_after}"
+    )
+
+
+def test_restock_persists_to_db():
+    """After restock() the DB total for the SKU must increase."""
+    sku = "PALLET-BOX"
+    db_before = sum(
+        r["quantity"] for r in db_module.query_all("SELECT quantity FROM stock WHERE sku = ?", (sku,))
+    )
+    warehouse_module.restock(sku, 20)
+    db_after = sum(
+        r["quantity"] for r in db_module.query_all("SELECT quantity FROM stock WHERE sku = ?", (sku,))
+    )
+    assert db_after == db_before + 20, (
+        f"DB not updated after restock: expected {db_before + 20}, got {db_after}"
+    )
+
+
+def test_stock_cache_matches_db_after_operations():
+    """After a decrement and a restock the cache total must equal the DB total."""
+    sku = "WIDGET-2"
+    warehouse_module.check_and_decrement_stock(sku, 10)
+    warehouse_module.restock(sku, 5)
+    cache_total = warehouse_module.get_stock(sku)
+    db_total = sum(
+        r["quantity"] for r in db_module.query_all("SELECT quantity FROM stock WHERE sku = ?", (sku,))
+    )
+    assert cache_total == db_total, (
+        f"Cache/DB diverged after operations: cache={cache_total}, db={db_total}"
+    )
