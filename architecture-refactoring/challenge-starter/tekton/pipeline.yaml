@@ -1,0 +1,97 @@
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: wareflow-security-scan
+spec:
+  params:
+    - name: BOB_API_KEY
+      type: string
+      description: API key for Bob vulnerability scan
+    - name: REPO_URL
+      type: string
+      description: Git repository URL to scan
+    - name: GIT_REVISION
+      type: string
+      description: Git revision to scan
+      default: main
+  workspaces:
+    - name: scan-results
+      description: Shared workspace for scan results
+  tasks:
+    - name: bob-security-scan
+      taskRef:
+        name: bob-vulnerability-scan
+      params:
+        - name: BOB_API_KEY
+          value: $(params.BOB_API_KEY)
+        - name: REPO_URL
+          value: $(params.REPO_URL)
+        - name: GIT_REVISION
+          value: $(params.GIT_REVISION)
+      workspaces:
+        - name: output
+          workspace: scan-results
+
+    - name: send-report-email
+      runAfter:
+        - bob-security-scan
+      workspaces:
+        - name: scan-results
+          workspace: scan-results
+      taskSpec:
+        workspaces:
+          - name: scan-results
+            description: Workspace containing the scan report
+        steps:
+          - name: send-email
+            image: python:3.12-slim
+            env:
+              - name: SMTP_HOST
+                valueFrom:
+                  configMapKeyRef:
+                    name: team-info
+                    key: MAILPIT_SMTP_HOST
+              - name: SMTP_PORT
+                valueFrom:
+                  configMapKeyRef:
+                    name: team-info
+                    key: MAILPIT_SMTP_PORT
+              - name: SMTP_USER
+                valueFrom:
+                  configMapKeyRef:
+                    name: team-info
+                    key: MAILPIT_USERNAME
+              - name: SMTP_PASS
+                valueFrom:
+                  configMapKeyRef:
+                    name: team-info
+                    key: MAILPIT_PASSWORD
+            script: |
+              #!/usr/bin/env python3
+              import os, ssl, smtplib
+              from email.message import EmailMessage
+
+              workspace = "$(workspaces.scan-results.path)"
+              report_path = workspace + "/bob-scan-report.txt"
+
+              try:
+                  with open(report_path) as f:
+                      body = f.read()
+              except FileNotFoundError:
+                  body = "Report non trovato in: " + report_path
+
+              msg = EmailMessage()
+              msg["Subject"] = "WareFlow Security Scan Report"
+              msg["From"] = os.environ["SMTP_USER"]
+              msg["To"] = os.environ["SMTP_USER"]
+              msg.set_content(body)
+
+              ctx = ssl.create_default_context()
+              ctx.check_hostname = False
+              ctx.verify_mode = ssl.CERT_NONE
+
+              with smtplib.SMTP_SSL(os.environ["SMTP_HOST"], int(os.environ["SMTP_PORT"]), context=ctx) as s:
+                  s.login(os.environ["SMTP_USER"], os.environ["SMTP_PASS"])
+                  s.send_message(msg)
+
+              print("Email inviata con successo a", os.environ["SMTP_USER"])
