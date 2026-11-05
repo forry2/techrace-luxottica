@@ -211,6 +211,37 @@
     .message.assistant { background: #f1f5f9; color: #1f2328; align-self: flex-start; border-bottom-left-radius: 4px; }
     .message.error     { background: #fee2e2; color: #7f1d1d; align-self: flex-start; font-size: 12px; }
 
+    /* ── Markdown elements inside assistant bubbles ── */
+    .message.assistant p             { margin: 0 0 6px; }
+    .message.assistant p:last-child  { margin-bottom: 0; }
+    .message.assistant strong        { font-weight: 700; }
+    .message.assistant em            { font-style: italic; }
+    .message.assistant ul,
+    .message.assistant ol            { padding-left: 18px; margin: 4px 0 6px; }
+    .message.assistant li            { margin-bottom: 2px; }
+    .message.assistant code {
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 11px; background: #e2e8f0; padding: 1px 4px; border-radius: 3px;
+    }
+    .message.assistant pre {
+      background: #1e293b; color: #e2e8f0; border-radius: 6px;
+      padding: 10px 12px; overflow-x: auto; margin: 6px 0;
+    }
+    .message.assistant pre code { background: none; padding: 0; font-size: 11px; color: inherit; }
+    .message.assistant table {
+      border-collapse: collapse; width: 100%; margin: 6px 0; font-size: 12px;
+    }
+    .message.assistant th,
+    .message.assistant td            { border: 1px solid #cbd5e1; padding: 5px 10px; text-align: left; }
+    .message.assistant th            { background: #e2e8f0; font-weight: 600; }
+    .message.assistant tr:nth-child(even) td { background: #f8fafc; }
+    .message.assistant blockquote {
+      border-left: 3px solid #94a3b8; margin: 4px 0; padding: 4px 10px; color: #57606a;
+    }
+    .message.assistant h1,
+    .message.assistant h2,
+    .message.assistant h3            { margin: 6px 0 4px; font-weight: 700; }
+
     .typing-indicator {
       display: none; gap: 4px; align-items: center;
       background: #f1f5f9; border-radius: 12px; border-bottom-left-radius: 4px;
@@ -256,6 +287,8 @@
       .chat-container { display: none; }
     }
   </style>
+  <!-- Markdown parser (safe: only used on assistant replies, never on user input) -->
+  <script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
 </head>
 <body>
 
@@ -686,7 +719,13 @@
     function addMessage(role, content) {
       const div = document.createElement('div');
       div.className = `message ${role}`;
-      div.textContent = content;
+      if (role === 'assistant') {
+        // Render Markdown from the bot as HTML (safe: bot-generated, not user input)
+        div.innerHTML = marked.parse(content);
+      } else {
+        // User messages and errors: plain text to prevent XSS
+        div.textContent = content;
+      }
       messagesEl.insertBefore(div, typingEl);
       scrollToBottom();
     }
