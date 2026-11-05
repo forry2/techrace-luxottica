@@ -1,5 +1,29 @@
 # M3 — Refactoring strutturale di WareFlow
 
+## Sommario
+
+Questa fase ha risanato la struttura interna di WareFlow senza toccare il comportamento esterno.
+Sono stati risolti tre problemi identificati in M1:
+
+- **Dipendenza circolare rimossa.** `warehouse.py` chiamava `orders.py` in modo nascosto (import dentro
+  una funzione), creando un ciclo rilevabile staticamente. La funzione responsabile è stata spostata in
+  `orders.py`, dove appartiene logicamente, e il ciclo è scomparso.
+
+- **`utils.py` decomposto.** Il modulo raccoglieva quattro funzioni senza nessun legame tra loro
+  (logging, validazione input, formattazione email, calcolo tariffa). Ciascuna è stata spostata nel
+  modulo che ne ha la responsabilità semantica: è nato `validators.py`, mentre le altre tre funzioni
+  sono entrate rispettivamente in `utils.py`, `notifications.py` e `shipping.py`.
+
+- **Codice morto eliminato.** `legacy_fax.py` era un residuo di un gateway fax dismesso da anni,
+  ancora importato attivamente da `notifications.py`. Il file è stato cancellato e tutti i riferimenti
+  rimossi. Il test che lo testava è stato marcato come skip con spiegazione.
+
+Al termine del refactoring: nessun ciclo di import, 47 test passano, 1 è skippato (il modulo rimosso),
+1 fallisce per la race condition sullo stock — bug già presente prima di M3, oggetto di M4.
+
+---
+
+
 ## Obiettivo
 
 Eliminare i problemi strutturali interni identificati in M1 senza cambiare il comportamento esterno dell'applicazione:
