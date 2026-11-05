@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WareFlow Pitch — Team Luxottica</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #0a0a1a;
+    color: #fff;
+    min-height: 100vh;
+    padding: 0 0 60px;
+  }
+
+  .nav {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    padding: 18px 24px 0;
+    flex-wrap: wrap;
+    position: sticky;
+    top: 0;
+    background: #0a0a1a;
+    z-index: 10;
+    border-bottom: 1px solid #0d1225;
+    padding-bottom: 12px;
+  }
+  .nav button {
+    background: transparent;
+    border: 1px solid #3b4a8a;
+    color: #a0aecf;
+    padding: 6px 16px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all .2s;
+  }
+  .nav button.active, .nav button:hover {
+    background: #2a3a7a;
+    border-color: #5b6ec0;
+    color: #fff;
+  }
+
+  .slides { padding: 24px 16px 40px; max-width: 900px; margin: 0 auto; }
+  .slide { display: none; }
+  .slide.active { display: block; }
+
+  .topbar {
+    background: linear-gradient(90deg, #1a237e, #283593);
+    border-radius: 12px 12px 0 0;
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+    color: #90a4d4;
+    letter-spacing: 0.5px;
+  }
+  .topbar .brand { font-weight: 700; color: #7c87f0; font-size: 13px; }
+  .topbar .slidenum { background: #3949ab; padding: 2px 10px; border-radius: 10px; color: #c5cae9; font-size: 11px; }
+
+  .card {
+    background: linear-gradient(160deg, #0d1332 0%, #111827 100%);
+    border: 1px solid #1e2a5e;
+    border-top: none;
+    border-radius: 0 0 12px 12px;
+    padding: 32px 36px 36px;
+  }
+
+  .slide-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #5c6bc0;
+    margin-bottom: 8px;
+  }
+  h1.slide-title {
+    font-size: 32px;
+    font-weight: 700;
+    color: #e8eaf6;
+    line-height: 1.2;
+    margin-bottom: 6px;
+  }
+  .subtitle {
+    font-size: 15px;
+    color: #7986cb;
+    margin-bottom: 28px;
+  }
+  .divider { width: 48px; height: 3px; background: #3f51b5; border-radius: 2px; margin-bottom: 28px; }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+
+  .box {
+    background: #0d1a3e;
+    border: 1px solid #1e3060;
+    border-radius: 10px;
+    padding: 18px 20px;
+  }
+  .box .box-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #5c6bc0;
+    margin-bottom: 6px;
+  }
+  .box .box-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #c5cae9;
+    margin-bottom: 6px;
+  }
+  .box p {
+    font-size: 13px;
+    color: #8898c8;
+    line-height: 1.6;
+  }
+  .box.highlight {
+    background: linear-gradient(135deg, #0d1f5c, #162044);
+    border-color: #3949ab;
+  }
+  .box.accent {
+    background: linear-gradient(135deg, #1a0a3e, #160d30);
+    border-color: #512da8;
+  }
+  .box.accent .box-title { color: #b39ddb; }
+
+  .tag {
+    display: inline-block;
+    background: #1a2460;
+    border: 1px solid #3949ab;
+    color: #9fa8da;
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 12px;
+    margin: 3px 3px 0 0;
+    font-weight: 600;
+  }
+  .tag.green { background: #0a2a1a; border-color: #2e7d32; color: #81c784; }
+  .tag.purple { background: #1a0a3e; border-color: #6a1b9a; color: #ce93d8; }
+
+  .stats { display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+  .stat {
+    background: #0d1a3e;
+    border: 1px solid #1e3060;
+    border-radius: 10px;
+    padding: 14px 20px;
+    text-align: center;
+    flex: 1;
+    min-width: 100px;
+  }
+  .stat .num { font-size: 28px; font-weight: 800; color: #5c6bc0; }
+  .stat .lbl { font-size: 11px; color: #546e9a; margin-top: 2px; text-transform: uppercase; letter-spacing: 1px; }
+
+  .flow { display: flex; align-items: flex-start; gap: 0; margin-bottom: 24px; }
+  .flow-step {
+    flex: 1;
+    text-align: center;
+    padding: 0 8px;
+    position: relative;
+  }
+  .flow-step:not(:last-child)::after {
+    content: '→';
+    position: absolute;
+    right: -10px;
+    top: 12px;
+    color: #3949ab;
+    font-size: 18px;
+  }
+  .flow-circle {
+    width: 44px; height: 44px;
+    background: #1e2a6e;
+    border: 2px solid #3949ab;
+    border-radius: 50%;
+    margin: 0 auto 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+  .flow-step .ft { font-size: 12px; font-weight: 700; color: #c5cae9; }
+  .flow-step .fd { font-size: 11px; color: #7986cb; margin-top: 2px; }
+
+  .bullet-list { list-style: none; padding: 0; }
+  .bullet-list li {
+    padding: 9px 0 9px 22px;
+    position: relative;
+    font-size: 13.5px;
+    color: #b0bce8;
+    border-bottom: 1px solid #131d3a;
+    line-height: 1.5;
+  }
+  .bullet-list li:last-child { border-bottom: none; }
+  .bullet-list li::before {
+    content: '▸';
+    position: absolute; left: 0;
+    color: #5c6bc0;
+    font-size: 12px;
+    top: 10px;
+  }
+  .bullet-list li strong { color: #e8eaf6; }
+
+  .quote {
+    background: #0a1530;
+    border-left: 3px solid #5c6bc0;
+    padding: 14px 18px;
+    border-radius: 0 8px 8px 0;
+    font-size: 13.5px;
+    color: #9fa8da;
+    line-height: 1.6;
+    margin-top: 16px;
+    font-style: italic;
+  }
+
+  .slide-footer {
+    margin-top: 28px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+    color: #3a4a7a;
+    padding-top: 16px;
+    border-top: 1px solid #131d3a;
+  }
+  .slide-footer .team { font-weight: 700; color: #5c6bc0; }
+
+  .cover-hero { text-align: center; padding: 20px 0 10px; }
+  .cover-hero .big-title {
+    font-size: 52px;
+    font-weight: 900;
+    color: #e8eaf6;
+    letter-spacing: -1px;
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+  .cover-hero .big-title span { color: #5c6bc0; }
+  .cover-hero .tagline { font-size: 16px; color: #7986cb; margin-bottom: 24px; }
+
+  .hint { text-align: center; font-size: 11px; color: #2a3460; margin-top: 10px; }
+
+  @media (max-width: 600px) {
+    .grid2, .grid3 { grid-template-columns: 1fr; }
+    .flow { flex-direction: column; align-items: center; }
+    .flow-step:not(:last-child)::after { display: none; }
+    h1.slide-title { font-size: 24px; }
+    .cover-hero .big-title { font-size: 36px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="nav" id="nav">
+  <button onclick="showSlide(0)" class="active">① Copertina</button>
+  <button onclick="showSlide(1)">② Problema</button>
+  <button onclick="showSlide(2)">③ Approccio</button>
+  <button onclick="showSlide(3)">④ Bob in azione</button>
+  <button onclick="showSlide(4)">⑤ Sfide</button>
+  <button onclick="showSlide(5)">⑥ Prossimi passi</button>
+</div>
+
+<div class="slides">
+
+  <!-- SLIDE 0 — COPERTINA -->
+  <div class="slide active" id="s0">
+    <div class="topbar">
+      <span class="brand">tech RACE · IBM Bob</span>
+      <span class="slidenum">Copertina</span>
+    </div>
+    <div class="card">
+      <div class="cover-hero">
+        <div class="big-title">Ware<span>Flow</span></div>
+        <div class="tagline">Dal codice legacy a un sistema osservabile, sicuro e intelligente</div>
+        <div style="display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-bottom:28px;">
+          <span class="tag">M1 Architettura</span>
+          <span class="tag">M2 Test Coverage</span>
+          <span class="tag">M3 Refactoring</span>
+          <span class="tag">M4 Concorrenza</span>
+          <span class="tag purple">M5A AI Assistant</span>
+          <span class="tag purple">M5B Security Pipeline</span>
+        </div>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="num">50</div><div class="lbl">test passano</div></div>
+        <div class="stat"><div class="num">0</div><div class="lbl">cicli di import</div></div>
+        <div class="stat"><div class="num">0</div><div class="lbl">race conditions</div></div>
+        <div class="stat"><div class="num">1</div><div class="lbl">PipelineRun ✓</div></div>
+        <div class="stat"><div class="num">9</div><div class="lbl">endpoint REST</div></div>
+      </div>
+      <div class="slide-footer">
+        <span class="team">Team Luxottica</span>
+        <span>WareFlow · NordShip · tech RACE 2026</span>
+      </div>
+    </div>
+    <div class="hint">Usa i pulsanti in alto per navigare tra le slide</div>
+  </div>
+
+  <!-- SLIDE 1 — PROBLEMA -->
+  <div class="slide" id="s1">
+    <div class="topbar">
+      <span class="brand">tech RACE · IBM Bob</span>
+      <span class="slidenum">1 / 5 — Problema</span>
+    </div>
+    <div class="card">
+      <div class="slide-label">Il problema</div>
+      <h1 class="slide-title">Un sistema che funziona.<br>Ma nessuno sa perché.</h1>
+      <div class="subtitle">WareFlow in produzione da anni — costruito da contractor che non ci sono più.</div>
+      <div class="divider"></div>
+
+      <div class="grid2" style="margin-bottom:20px;">
+        <div class="box highlight">
+          <div class="box-label">Problema operativo</div>
+          <div class="box-title">Conteggi di stock sbagliati</div>
+          <p>Durante i picchi di attività lo stock di alcuni articoli risultava <strong>sempre più basso del reale</strong> dopo una raffica di ordini. Nessuno riusciva a riprodurlo con certezza.</p>
+        </div>
+        <div class="box highlight">
+          <div class="box-label">Problema strutturale</div>
+          <div class="box-title">Zero documentazione reale</div>
+          <p>Il README era parziale e inaccurato. Dipendenze circolari nascoste, codice morto importato, un modulo "discarica" con 4 responsabilità non correlate.</p>
+        </div>
+      </div>
+
+      <div class="box">
+        <div class="box-label">Valore potenziale della soluzione</div>
+        <div class="box-title">Da sistema fragile a piattaforma affidabile e intelligente</div>
+        <p>Documentazione verificata sul codice reale · Test coverage 100% · Bug di concorrenza risolto alla radice · AI assistant per il magazzino · Security scan automatizzato in CI/CD</p>
+      </div>
+
+      <div class="slide-footer">
+        <span class="team">Team Luxottica</span>
+        <span>NordShip WareFlow</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 2 — APPROCCIO -->
+  <div class="slide" id="s2">
+    <div class="topbar">
+      <span class="brand">tech RACE · IBM Bob</span>
+      <span class="slidenum">2 / 5 — Approccio</span>
+    </div>
+    <div class="card">
+      <div class="slide-label">L'approccio</div>
+      <h1 class="slide-title">5 milestone,<br>una direzione chiara.</h1>
+      <div class="subtitle">Dalla comprensione del codice alla sicurezza automatizzata.</div>
+      <div class="divider"></div>
+
+      <div class="flow">
+        <div class="flow-step">
+          <div class="flow-circle">📐</div>
+          <div class="ft">M1</div>
+          <div class="fd">Mappa architettura</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-circle">🧪</div>
+          <div class="ft">M2</div>
+          <div class="fd">Test 0→100%</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-circle">🔧</div>
+          <div class="ft">M3</div>
+          <div class="fd">Refactoring</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-circle">🔒</div>
+          <div class="ft">M4</div>
+          <div class="fd">Fix concorrenza</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-circle">🤖</div>
+          <div class="ft">M5</div>
+          <div class="fd">AI + Pipeline</div>
+        </div>
+      </div>
+
+      <div class="grid3">
+        <div class="box">
+          <div class="box-label">M1 + M2</div>
+          <div class="box-title">Capire prima di toccare</div>
+          <p>ARCHITECTURE.md da codice reale. Copertura test da 11% a 100%. Due bug documentati prima ancora di correggerli.</p>
+        </div>
+        <div class="box">
+          <div class="box-label">M3 + M4</div>
+          <div class="box-title">Struttura e correttezza</div>
+          <p>Cicli rimossi, utils scomposto, dead code eliminato. Race condition risolta con <code>threading.Lock</code> atomico. 50 thread, risultato sempre esatto.</p>
+        </div>
+        <div class="box accent">
+          <div class="box-label">M5A + M5B</div>
+          <div class="box-title">Intelligenza e sicurezza</div>
+          <p>AI assistant watsonx per query in linguaggio naturale sul magazzino. Pipeline Tekton con IBM Bob per security scan automatico e report via email.</p>
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <span class="team">Team Luxottica</span>
+        <span>5 milestone completate</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 3 — BOB IN AZIONE -->
+  <div class="slide" id="s3">
+    <div class="topbar">
+      <span class="brand">tech RACE · IBM Bob</span>
+      <span class="slidenum">3 / 5 — Bob in azione</span>
+    </div>
+    <div class="card">
+      <div class="slide-label">Bob in azione</div>
+      <h1 class="slide-title">IBM Bob come<br>co-pilota tecnico.</h1>
+      <div class="subtitle">Non solo generazione di codice — analisi, documentazione, diagnosi, deploy.</div>
+      <div class="divider"></div>
+
+      <div class="grid2" style="margin-bottom:16px;">
+        <div>
+          <ul class="bullet-list">
+            <li><strong>Analisi codebase</strong> — Bob ha letto e mappato tutti i moduli, scoprendo la dipendenza circolare deferred in <code>warehouse.py</code> invisibile a occhio nudo.</li>
+            <li><strong>7 diagrammi Mermaid</strong> — ER, Sequence, State Machine, Package, Component, Deployment, Use Case — tutti verificati contro il codice reale.</li>
+            <li><strong>50 test da zero</strong> — partendo da copertura 11%, identificando e documentando 2 bug prima di correggerli.</li>
+            <li><strong>Refactoring guidato</strong> — ha scomposto <code>utils.py</code>, eliminato <code>legacy_fax.py</code>, rimosso il ciclo di import mantenendo tutti i test verdi.</li>
+          </ul>
+        </div>
+        <div>
+          <ul class="bullet-list">
+            <li><strong>Diagnosi race condition</strong> — ha identificato il meccanismo esatto del <em>lost update</em> su <code>_STOCK_CACHE</code> e scritto il test che lo riproduce con 50 thread.</li>
+            <li><strong>Pipeline Tekton live</strong> — ha scritto il YAML, fatto il debug del fallimento RFC 5321 in produzione e corretto in tempo reale. PipelineRun Succeeded.</li>
+            <li><strong>Deploy OpenShift</strong> — build, Deployment, Service, Route, iniezione secrets watsonx — tutto da zero con Bob in Agent mode.</li>
+            <li><strong>AI assistant</strong> — endpoint <code>POST /assistant</code> con contesto di magazzino reale, modello <code>openai/gpt-oss-120b</code> su watsonx.ai.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="quote">
+        "Bob ha letto il codice che nessuno leggeva più, ha trovato il bug che nessuno riusciva a riprodurre, e ha scritto il test che lo dimostra — con 50 thread concorrenti."
+      </div>
+
+      <div class="slide-footer">
+        <span class="team">Team Luxottica</span>
+        <span>Ask · Plan · Agent mode</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 4 — SFIDE -->
+  <div class="slide" id="s4">
+    <div class="topbar">
+      <span class="brand">tech RACE · IBM Bob</span>
+      <span class="slidenum">4 / 5 — Sfide</span>
+    </div>
+    <div class="card">
+      <div class="slide-label">Le sfide</div>
+      <h1 class="slide-title">Ogni ostacolo<br>risolto in tempo reale.</h1>
+      <div class="subtitle">Codice legacy senza autore, race condition sottile, pipeline live su OpenShift.</div>
+      <div class="divider"></div>
+
+      <div class="grid2">
+        <div class="box" style="margin-bottom:14px;">
+          <div class="box-label" style="color:#ef9a9a;">🔴 Sfida 1</div>
+          <div class="box-title">Capire codice senza documentazione</div>
+          <p>Nessun autore, README inaccurato, import deferred nascosto. <strong>Soluzione:</strong> Bob ha analizzato il grafo AST, producendo una mappa verificata riga per riga.</p>
+        </div>
+        <div class="box" style="margin-bottom:14px;">
+          <div class="box-label" style="color:#ef9a9a;">🔴 Sfida 2</div>
+          <div class="box-title">Race condition non riproducibile</div>
+          <p>Nessuno riusciva a riprodurla in 2 anni. <strong>Soluzione:</strong> Bob ha identificato il <em>lost update</em> e scritto un test con 50 thread che lo dimostra deterministicamente.</p>
+        </div>
+        <div class="box">
+          <div class="box-label" style="color:#ffcc80;">🟡 Sfida 3</div>
+          <div class="box-title">Pipeline fallisce in produzione</div>
+          <p>Il task email falliva: <code>SMTP_USER = "team-luxottica"</code> non è un indirizzo RFC 5321 valido. <strong>Fix live:</strong> costruito <code>team-luxottica@nordship.internal</code> prima del send.</p>
+        </div>
+        <div class="box">
+          <div class="box-label" style="color:#ffcc80;">🟡 Sfida 4</div>
+          <div class="box-title">Test M2 vs rimozione dead code M3</div>
+          <p><code>test_legacy_fax.py</code> importava il modulo da eliminare. <strong>Soluzione:</strong> test marcato <code>@pytest.mark.skip</code> con spiegazione — zero false negative, zero moduli morti.</p>
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <span class="team">Team Luxottica</span>
+        <span>Debugging live · Zero regressioni</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 5 — PROSSIMI PASSI -->
+  <div class="slide" id="s5">
+    <div class="topbar">
+      <span class="brand">tech RACE · IBM Bob</span>
+      <span class="slidenum">5 / 5 — Prossimi passi</span>
+    </div>
+    <div class="card">
+      <div class="slide-label">Prossimi passi</div>
+      <h1 class="slide-title">Da prototipo<br>a piattaforma.</h1>
+      <div class="subtitle">WareFlow è risanato. Le fondamenta ci sono. Ecco dove si può andare.</div>
+      <div class="divider"></div>
+
+      <div class="grid3" style="margin-bottom:20px;">
+        <div class="box">
+          <div class="box-label">Infrastruttura</div>
+          <div class="box-title">Persistenza reale</div>
+          <p>Migrare da SQLite in-memory a PostgreSQL. I restock sopravvivono al riavvio. Possibile scaling orizzontale.</p>
+          <br>
+          <span class="tag">PostgreSQL</span>
+          <span class="tag">SQLAlchemy</span>
+        </div>
+        <div class="box">
+          <div class="box-label">CI/CD</div>
+          <div class="box-title">Pipeline completa</div>
+          <p>Aggiungere stage di deploy automatico dopo il security scan. La pipeline oggi fa scan+email — può diventare un gate reale bloccante.</p>
+          <br>
+          <span class="tag">Tekton</span>
+          <span class="tag">GitOps</span>
+        </div>
+        <div class="box accent">
+          <div class="box-label">AI</div>
+          <div class="box-title">Assistant avanzato</div>
+          <p>Estendere il chatbot per generare ordini da linguaggio naturale, prevedere rotture di stock, suggerire riordini automatici.</p>
+          <br>
+          <span class="tag purple">watsonx.ai</span>
+          <span class="tag purple">RAG</span>
+        </div>
+      </div>
+
+      <div class="box" style="background:linear-gradient(135deg,#0d1a3e,#111827);border-color:#3949ab;">
+        <div class="box-label">La lezione</div>
+        <div class="box-title" style="color:#9fa8da;">Il valore di Bob non è solo nella velocità — è nella profondità.</div>
+        <p>In un giorno Bob ha letto codice che nessuno capiva da anni, ha trovato il bug, scritto i test, risanato la struttura e deployato su OpenShift. Il tutto documentando ogni scelta in modo che il prossimo team capisca.</p>
+      </div>
+
+      <div class="slide-footer">
+        <span class="team">Team Luxottica</span>
+        <span>tech RACE 2026 · cecilia.surano@it.ibm.com</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  function showSlide(n) {
+    document.querySelectorAll('.slide').forEach(function(s,i){ s.classList.toggle('active', i===n); });
+    document.querySelectorAll('#nav button').forEach(function(b,i){ b.classList.toggle('active', i===n); });
+  }
+  document.addEventListener('keydown', function(e) {
+    var active = Array.from(document.querySelectorAll('.slide')).findIndex(function(s){ return s.classList.contains('active'); });
+    if (e.key === 'ArrowRight' && active < 5) showSlide(active + 1);
+    if (e.key === 'ArrowLeft'  && active > 0) showSlide(active - 1);
+  });
+</script>
+
+<p style="text-align:center;font-size:11px;color:#1a2240;margin:20px 0 0;border-top:1px solid #0d1225;padding-top:12px;">Made with IBM Bob</p>
+</body>
+</html>
