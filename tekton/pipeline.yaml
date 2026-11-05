@@ -1,0 +1,104 @@
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: wareflow-security-pipeline
+spec:
+  params:
+    - name: BOB_API_KEY
+      type: string
+      description: IBM Bob API key for vulnerability scan
+    - name: SMTP_HOST
+      type: string
+      description: SMTP host for email report
+      default: "mailpit-smtp"
+    - name: SMTP_PORT
+      type: string
+      description: SMTP port
+      default: "1025"
+    - name: REPORT_TO
+      type: string
+      description: Email recipient for the security report
+      default: "team@techrace.local"
+    - name: IMAGE
+      type: string
+      description: Container image to scan
+      default: "image-registry.openshift-image-registry.svc:5000/$(context.pipeline.namespace)/wareflow:latest"
+
+  tasks:
+    - name: vulnerability-scan
+      taskRef:
+        name: bob-vulnerability-scan
+      params:
+        - name: BOB_API_KEY
+          value: $(params.BOB_API_KEY)
+        - name: IMAGE
+          value: $(params.IMAGE)
+
+    - name: send-report-email
+      runAfter:
+        - vulnerability-scan
+      taskSpec:
+        params:
+          - name: SMTP_HOST
+          - name: SMTP_PORT
+          - name: REPORT_TO
+          - name: SCAN_RESULT
+        steps:
+          - name: send-email
+            image: python:3.12-slim
+            env:
+              - name: SMTP_HOST
+                value: $(params.SMTP_HOST)
+              - name: SMTP_PORT
+                value: $(params.SMTP_PORT)
+              - name: REPORT_TO
+                value: $(params.REPORT_TO)
+              - name: SCAN_RESULT
+                value: $(params.SCAN_RESULT)
+            script: |
+              #!/usr/bin/env python3
+              import os, smtplib
+              from email.mime.text import MIMEText
+
+              smtp_host = os.environ["SMTP_HOST"]
+              smtp_port = int(os.environ["SMTP_PORT"])
+              report_to = os.environ["REPORT_TO"]
+              scan_result = os.environ.get("SCAN_RESULT", "no result")
+
+              msg = MIMEText(f"Security scan report:\n\n{scan_result}")
+              msg["Subject"] = "WareFlow Security Scan Report"
+              msg["From"] = "pipeline@techrace.local"
+              msg["To"] = report_to
+
+              with smtplib.SMTP(smtp_host, smtp_port) as server:
+                  server.sendmail(msg["From"], [report_to], msg.as_string())
+              print(f"Email report sent to {report_to}")
+      params:
+        - name: SMTP_HOST
+          value: $(params.SMTP_HOST)
+        - name: SMTP_PORT
+          value: $(params.SMTP_PORT)
+        - name: REPORT_TO
+          value: $(params.REPORT_TO)
+        - name: SCAN_RESULT
+          value: $(tasks.vulnerability-scan.results.report)
+
+---
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: wareflow-security-pipeline-run
+spec:
+  pipelineRef:
+    name: wareflow-security-pipeline
+  params:
+    - name: BOB_API_KEY
+      value: $(BOB_API_KEY)
+    - name: SMTP_HOST
+      value: "mailpit-smtp"
+    - name: SMTP_PORT
+      value: "1025"
+    - name: REPORT_TO
+      value: "team@techrace.local"
+    - name: IMAGE
+      value: "image-registry.openshift-image-registry.svc:5000/$(NAMESPACE)/wareflow:latest"

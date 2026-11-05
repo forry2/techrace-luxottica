@@ -49,5 +49,38 @@ def create_shipment_for_order(order, lines):
     }
 
 
+def create_shipment_for_line(order, line):
+    """Crea una spedizione dedicata per una singola riga ordine (un articolo)."""
+    warehouse_id = warehouse.get_warehouse_for_sku(line["sku"])
+    if warehouse_id is None:
+        warehouse_id = 1
+
+    rate = calculate_shipping_rate(order, [line])
+    tracking_code = _generate_tracking_code()
+
+    shipment_id = db.execute(
+        "INSERT INTO shipments (order_id, warehouse_id, tracking_code, status) VALUES (?, ?, ?, 'PENDING')",
+        (order["id"], warehouse_id, tracking_code),
+    )
+
+    log_event(
+        "shipment_created",
+        order_id=order["id"],
+        sku=line["sku"],
+        tracking_code=tracking_code,
+        rate=rate,
+    )
+    return {
+        "id": shipment_id,
+        "order_id": order["id"],
+        "warehouse_id": warehouse_id,
+        "tracking_code": tracking_code,
+        "sku": line["sku"],
+        "quantity": line["quantity"],
+        "status": "PENDING",
+        "rate": rate,
+    }
+
+
 def list_shipments():
     return db.query_all("SELECT * FROM shipments")

@@ -29,7 +29,12 @@ def get_order(order_id):
 
 
 def list_orders():
-    return db.query_all("SELECT id, customer_name, status, created_at FROM orders")
+    order_list = db.query_all("SELECT id, customer_name, status, created_at FROM orders")
+    for order in order_list:
+        order["lines"] = db.query_all(
+            "SELECT sku, quantity FROM order_lines WHERE order_id = ?", (order["id"],)
+        )
+    return order_list
 
 
 def list_pending_orders_for_sku(sku):
@@ -67,11 +72,11 @@ def confirm_order(order_id):
     db.execute("UPDATE orders SET status = 'CONFIRMED' WHERE id = ?", (order_id,))
 
     order = get_order(order_id)
-    shipment = shipping.create_shipment_for_order(order, order["lines"])
+    shipments = [shipping.create_shipment_for_line(order, line) for line in order["lines"]]
     notify_customer(order, order["lines"])
     log_event("order_confirmed", order_id=order_id)
 
-    order["shipment"] = shipment
+    order["shipments"] = shipments
     return order
 
 

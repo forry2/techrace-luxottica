@@ -17,25 +17,20 @@ from app.watsonx_client import WatsonxClient
 
 bp = Blueprint("assistant", __name__)
 
-_FORM_SKUS = ", ".join(sorted({"WIDGET-1", "WIDGET-2", "PALLET-BOX"}))
+_VALID_SKUS = {"WIDGET-1", "WIDGET-2", "PALLET-BOX"}
+_FORM_SKUS = ", ".join(sorted(_VALID_SKUS))
 
 _DEFAULT_SYSTEM_PROMPT = (
     "Sei un assistente AI per la gestione magazzino WareFlow, preciso e conciso. "
     "Puoi aiutare con ordini, stock, magazzini e spedizioni. "
-    "Rispondi SEMPRE basandoti ESCLUSIVAMENTE sui dati reali del magazzino che ti vengono forniti nel contesto. "
-    "Non inventare dati e non chiedere chiarimenti su quale sistema usare: i dati sono già inclusi nel contesto. "
+    "Quando l'utente chiede informazioni su ordini, clienti, magazzini, stock o spedizioni, "
+    "usa SEMPRE i tool disponibili per recuperare i dati aggiornati dal sistema. "
+    "Quando l'utente vuole creare un ordine o aggiungere un cliente con articoli, "
+    "usa SEMPRE lo strumento create_order per crearlo direttamente nel sistema. "
+    "Quando l'utente vuole aggiungere stock, usa lo strumento restock_sku. "
+    "Non inventare dati: usa i tool per ottenerli. "
+    f"SKU disponibili: {_FORM_SKUS}. "
     "Rispondi sempre nella stessa lingua in cui ti viene posta la domanda."
-)
-
-_EXTRACT_SYSTEM_PROMPT = (
-    "Sei un estrattore di dati. Analizza il testo e rispondi ESCLUSIVAMENTE con un oggetto JSON "
-    "valido, senza markdown, senza commenti, senza testo aggiuntivo.\n"
-    "Formato richiesto:\n"
-    '{"customer_name": "<nome cliente, stringa vuota se assente>", '
-    '"lines": [{"sku": "<SKU>", "quantity": <intero>}]}\n'
-    f"SKU validi (usa SOLO questi): {_FORM_SKUS}.\n"
-    "Se nel testo non c'è nessun ordine da creare, rispondi esattamente con: "
-    '{"customer_name": "", "lines": []}'
 )
 
 # ---------------------------------------------------------------------------
@@ -43,6 +38,7 @@ _EXTRACT_SYSTEM_PROMPT = (
 # ---------------------------------------------------------------------------
 
 _TOOLS = [
+    # ── Tool di lettura ──────────────────────────────────────────────────────
     {
         "type": "function",
         "function": {
@@ -122,6 +118,70 @@ _TOOLS = [
             "parameters": {"type": "object", "properties": {}, "required": []},
         },
     },
+    # ── Tool di scrittura ────────────────────────────────────────────────────
+    {
+        "type": "function",
+        "function": {
+            "name": "create_order",
+            "description": (
+                "Crea un nuovo ordine nel sistema WareFlow con un cliente e le righe articolo. "
+                "Usare quando l'utente vuole creare un ordine o aggiungere un cliente con articoli."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "customer_name": {
+                        "type": "string",
+                        "description": "Nome del cliente per cui creare l'ordine.",
+                    },
+                    "lines": {
+                        "type": "array",
+                        "description": "Righe dell'ordine con SKU e quantità.",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "sku": {
+                                    "type": "string",
+                                    "enum": sorted(_VALID_SKUS),
+                                    "description": "Codice SKU del prodotto.",
+                                },
+                                "quantity": {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "description": "Quantità da ordinare.",
+                                },
+                            },
+                            "required": ["sku", "quantity"],
+                        },
+                    },
+                },
+                "required": ["customer_name", "lines"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "restock_sku",
+            "description": "Aggiunge quantità a uno SKU nel magazzino.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "sku": {
+                        "type": "string",
+                        "enum": sorted(_VALID_SKUS),
+                        "description": "Codice SKU da rifornire.",
+                    },
+                    "quantity": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "description": "Quantità da aggiungere allo stock.",
+                    },
+                },
+                "required": ["sku", "quantity"],
+            },
+        },
+    },
 ]
 
 # ---------------------------------------------------------------------------
@@ -131,47 +191,87 @@ _TOOLS = [
 _MAX_TOOL_ROUNDS = 5  # prevent infinite loops
 
 
-def _execute_tool(name: str, arguments: dict) -> str:
-    """Esegue il tool richiesto dal modello e restituisce il risultato come stringa JSON."""
+def _execute_tool(name: str, arguments: dict) -> tuple[str, bool]:
+    """
+    Esegue il tool richiesto dal modello.
+
+    Returns:
+        (result_json, is_write_action) — il secondo valore è True se il tool
+        ha modificato lo stato del sistema (ordine creato, stock aggiornato).
+    """
     try:
+        # ── Tool di lettura ──────────────────────────────────────────────────
         if name == "get_orders":
             result = orders.list_orders()
-            return json.dumps(result, ensure_ascii=False)
+            return json.dumps(result, ensure_ascii=False), False
 
         if name == "get_order":
             order_id = int(arguments.get("order_id", 0))
             result = orders.get_order(order_id)
             if result is None:
-                return json.dumps({"error": f"Ordine #{order_id} non trovato."}, ensure_ascii=False)
-            return json.dumps(result, ensure_ascii=False)
+                return json.dumps({"error": f"Ordine #{order_id} non trovato."}, ensure_ascii=False), False
+            return json.dumps(result, ensure_ascii=False), False
 
         if name == "get_warehouses":
             result = warehouse.list_warehouses()
-            return json.dumps(result, ensure_ascii=False)
+            return json.dumps(result, ensure_ascii=False), False
 
         if name == "get_stock":
             sku = arguments.get("sku", "").strip()
             if sku:
                 qty = warehouse.get_stock(sku)
-                return json.dumps({"sku": sku, "quantity": qty}, ensure_ascii=False)
+                return json.dumps({"sku": sku, "quantity": qty}, ensure_ascii=False), False
             rows = db.query_all("SELECT sku, warehouse_id, quantity FROM stock ORDER BY sku, warehouse_id")
-            return json.dumps(rows, ensure_ascii=False)
+            return json.dumps(rows, ensure_ascii=False), False
 
         if name == "get_customers":
             rows = db.query_all(
                 "SELECT customer_name, COUNT(*) AS total_orders "
                 "FROM orders GROUP BY customer_name ORDER BY customer_name"
             )
-            return json.dumps(rows, ensure_ascii=False)
+            return json.dumps(rows, ensure_ascii=False), False
 
         if name == "get_shipments":
             result = shipping.list_shipments()
-            return json.dumps(result, ensure_ascii=False)
+            return json.dumps(result, ensure_ascii=False), False
+
+        # ── Tool di scrittura ────────────────────────────────────────────────
+        if name == "create_order":
+            customer_name = arguments.get("customer_name", "").strip()
+            lines = arguments.get("lines", [])
+            if not customer_name:
+                return json.dumps({"error": "customer_name mancante"}), False
+            valid_lines = [
+                {"sku": l["sku"], "quantity": int(l["quantity"])}
+                for l in lines
+                if l.get("sku") in _VALID_SKUS and int(l.get("quantity", 0)) >= 1
+            ]
+            if not valid_lines:
+                return json.dumps({"error": "Nessuna riga valida. SKU disponibili: " + _FORM_SKUS}), False
+            order = orders.create_order(customer_name, valid_lines)
+            return json.dumps({
+                "success": True,
+                "order_id": order["id"],
+                "customer_name": order["customer_name"],
+                "status": order["status"],
+                "lines": valid_lines,
+            }), True
+
+        if name == "restock_sku":
+            sku = arguments.get("sku", "")
+            quantity = int(arguments.get("quantity", 0))
+            if sku not in _VALID_SKUS:
+                return json.dumps({"error": f"SKU '{sku}' non valido"}), False
+            if quantity < 1:
+                return json.dumps({"error": "quantità deve essere >= 1"}), False
+            warehouse.restock(sku, quantity)
+            new_qty = warehouse.get_stock(sku)
+            return json.dumps({"success": True, "sku": sku, "new_quantity": new_qty}), True
 
     except Exception as exc:  # noqa: BLE001
-        return json.dumps({"error": str(exc)}, ensure_ascii=False)
+        return json.dumps({"error": str(exc)}, ensure_ascii=False), False
 
-    return json.dumps({"error": f"Tool '{name}' non riconosciuto."}, ensure_ascii=False)
+    return json.dumps({"error": f"Tool '{name}' non riconosciuto."}, ensure_ascii=False), False
 
 
 # ---------------------------------------------------------------------------
@@ -246,12 +346,11 @@ def index():
 @bp.post("/chat")
 def chat():
     """
-    Invia la cronologia al modello.
-    Il system prompt include sempre il contesto aggiornato del magazzino (ordini, stock,
-    magazzini, spedizioni) in modo che il bot possa rispondere con dati reali.
-    Se il modello supporta il function-calling, usa i tool come canale alternativo;
-    altrimenti ha già tutto nel contesto.
-    Restituisce anche form_data se l'utente descrive un ordine da creare.
+    Invia la cronologia al modello con supporto tool-calling.
+    Il modello può invocare tool di lettura (get_orders, get_order, get_warehouses,
+    get_stock, get_customers, get_shipments) e di scrittura (create_order, restock_sku).
+    La risposta include `actions_done` con i tool di scrittura eseguiti con successo,
+    per permettere al frontend di refreshare le viste pertinenti.
     """
     body = request.get_json(silent=True) or {}
     messages = body.get("messages", [])
@@ -262,43 +361,60 @@ def chat():
     system_prompt = f"{base_prompt}\n\n{context}"
 
     client = _get_client()
+    actions_done = []
+
+    # Manteniamo una copia locale della history per la conversazione con i tool.
+    # Non modifichiamo la lista originale del client per non sporcare la history
+    # visibile all'utente con i messaggi interni di tool.
+    working_messages = list(messages)
+    reply = ""
 
     try:
-        reply = client.chat(messages=messages, system_prompt=system_prompt)
+        for _ in range(_MAX_TOOL_ROUNDS):
+            msg = client.chat_with_tools(
+                messages=working_messages,
+                tools=_TOOLS,
+                system_prompt=system_prompt,
+            )
+
+            tool_calls = msg.get("tool_calls") or []
+            if not tool_calls:
+                # Risposta testuale finale
+                reply = msg.get("content", "")
+                break
+
+            # Aggiungi il messaggio assistant con i tool_calls alla history di lavoro
+            working_messages.append(msg)
+
+            # Esegui tutti i tool richiesti e aggiungi i risultati
+            for tc in tool_calls:
+                tool_name = tc["function"]["name"]
+                try:
+                    tool_args = json.loads(tc["function"].get("arguments", "{}"))
+                except json.JSONDecodeError:
+                    tool_args = {}
+
+                tool_result, is_write = _execute_tool(tool_name, tool_args)
+
+                if is_write:
+                    result_data = json.loads(tool_result)
+                    actions_done.append({"tool": tool_name, "result": result_data})
+
+                working_messages.append({
+                    "role": "tool",
+                    "tool_call_id": tc["id"],
+                    "content": tool_result,
+                })
+        else:
+            reply = "Limite di iterazioni raggiunto. Riprova con una domanda più specifica."
+
     except RuntimeError as exc:
         return jsonify({"error": str(exc)}), 502
 
-    # --- Estrazione strutturata (seconda chiamata) per pre-popolare il form ordine ---
-    user_text = next((m["content"] for m in reversed(messages) if m.get("role") == "user"), "")
-    form_data = None
-    if user_text:
-        try:
-            raw_json = client.chat(
-                messages=[{"role": "user", "content": user_text}],
-                system_prompt=_EXTRACT_SYSTEM_PROMPT,
-            )
-            cleaned = raw_json.strip()
-            if cleaned.startswith("```"):
-                cleaned = cleaned.split("```")[1]
-                if cleaned.startswith("json"):
-                    cleaned = cleaned[4:]
-                cleaned = cleaned.strip()
-            extracted = json.loads(cleaned)
-            valid_skus = {"WIDGET-1", "WIDGET-2", "PALLET-BOX"}
-            lines = [
-                {"sku": str(l.get("sku", "")).strip(), "quantity": int(l.get("quantity", 1))}
-                for l in extracted.get("lines", [])
-                if str(l.get("sku", "")).strip() in valid_skus and int(l.get("quantity", 1)) >= 1
-            ]
-            if lines or extracted.get("customer_name", "").strip():
-                form_data = {
-                    "customer_name": str(extracted.get("customer_name", "")).strip(),
-                    "lines": lines,
-                }
-        except Exception:
-            pass  # estrazione fallita — non blocca la chat
-
-    return jsonify({"reply": reply, "form_data": form_data})
+    return jsonify({
+        "reply": reply,
+        "actions_done": actions_done if actions_done else None,
+    })
 
 
 @bp.post("/assistant")

@@ -78,7 +78,10 @@ def test_confirm_order_success():
     confirmed = confirm_order(order["id"])
     assert confirmed["status"] == "CONFIRMED"
     assert warehouse_module.get_stock("WIDGET-1") == stock_before - 3
-    assert "shipment" in confirmed
+    assert "shipments" in confirmed
+    assert len(confirmed["shipments"]) == 1
+    assert confirmed["shipments"][0]["sku"] == "WIDGET-1"
+    assert confirmed["shipments"][0]["tracking_code"].startswith("WF-")
 
 
 def test_confirm_order_not_found():
