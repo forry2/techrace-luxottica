@@ -263,46 +263,8 @@ def chat():
 
     client = _get_client()
 
-    # --- Tool-calling loop ---
-    # Tentiamo il function-calling; se il modello non supporta i tool_calls,
-    # risponde direttamente con content (che è già arricchito dal contesto).
-    working_messages = list(messages)
-    reply = ""
-
     try:
-        for _ in range(_MAX_TOOL_ROUNDS):
-            msg = client.chat_with_tools(
-                messages=working_messages,
-                tools=_TOOLS,
-                system_prompt=system_prompt,
-            )
-
-            tool_calls = msg.get("tool_calls") or []
-            if not tool_calls:
-                # Risposta testuale finale (diretta o dopo tool loop)
-                reply = msg.get("content", "")
-                break
-
-            # Aggiungi il messaggio assistant con i tool_calls alla history di lavoro
-            working_messages.append(msg)
-
-            # Esegui tutti i tool richiesti e aggiungi i risultati
-            for tc in tool_calls:
-                tool_name = tc["function"]["name"]
-                try:
-                    tool_args = json.loads(tc["function"].get("arguments", "{}"))
-                except json.JSONDecodeError:
-                    tool_args = {}
-
-                tool_result = _execute_tool(tool_name, tool_args)
-                working_messages.append({
-                    "role": "tool",
-                    "tool_call_id": tc["id"],
-                    "content": tool_result,
-                })
-        else:
-            reply = "Limite di iterazioni raggiunto. Riprova con una domanda più specifica."
-
+        reply = client.chat(messages=messages, system_prompt=system_prompt)
     except RuntimeError as exc:
         return jsonify({"error": str(exc)}), 502
 
