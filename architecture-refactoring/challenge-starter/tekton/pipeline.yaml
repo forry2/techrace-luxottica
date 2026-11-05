@@ -80,10 +80,13 @@ spec:
               except FileNotFoundError:
                   body = "Report non trovato in: " + report_path
 
+              smtp_user = os.environ["SMTP_USER"]
+              email_addr = smtp_user + "@nordship.internal"
+
               msg = EmailMessage()
               msg["Subject"] = "WareFlow Security Scan Report"
-              msg["From"] = os.environ["SMTP_USER"]
-              msg["To"] = os.environ["SMTP_USER"]
+              msg["From"] = email_addr
+              msg["To"] = email_addr
               msg.set_content(body)
 
               ctx = ssl.create_default_context()
