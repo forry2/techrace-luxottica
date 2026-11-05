@@ -2,7 +2,7 @@
 Blueprint Flask per il chatbot watsonx AI.
 Espone:
   GET  /            → pagina HTML del chatbot
-  POST /chat        → endpoint conversazione (chatbot)
+  POST /chat        → endpoint conversazione (chatbot con tool-calling)
   POST /assistant   → endpoint M5A (domanda in linguaggio naturale)
 """
 
@@ -12,7 +12,7 @@ from pathlib import Path
 
 from flask import Blueprint, jsonify, render_template, request
 
-from app import db, warehouse
+from app import db, orders, shipping, warehouse
 from app.watsonx_client import WatsonxClient
 
 bp = Blueprint("assistant", __name__)
@@ -22,6 +22,9 @@ _FORM_SKUS = ", ".join(sorted({"WIDGET-1", "WIDGET-2", "PALLET-BOX"}))
 _DEFAULT_SYSTEM_PROMPT = (
     "Sei un assistente AI per la gestione magazzino WareFlow, preciso e conciso. "
     "Puoi aiutare con ordini, stock, magazzini e spedizioni. "
+    "Quando l'utente chiede informazioni su ordini, clienti, magazzini, stock o spedizioni, "
+    "usa SEMPRE i tool disponibili per recuperare i dati aggiornati dal sistema. "
+    "Non inventare dati: usa i tool per ottenerli. "
     "Rispondi sempre nella stessa lingua in cui ti viene posta la domanda."
 )
 
@@ -35,6 +38,146 @@ _EXTRACT_SYSTEM_PROMPT = (
     "Se nel testo non c'è nessun ordine da creare, rispondi esattamente con: "
     '{"customer_name": "", "lines": []}'
 )
+
+# ---------------------------------------------------------------------------
+# Tool definitions (OpenAI function-calling schema)
+# ---------------------------------------------------------------------------
+
+_TOOLS = [
+    {
+        "type": "function",
+        "function": {
+            "name": "get_orders",
+            "description": (
+                "Restituisce la lista di tutti gli ordini nel sistema, con id, cliente, "
+                "stato e data di creazione."
+            ),
+            "parameters": {"type": "object", "properties": {}, "required": []},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_order",
+            "description": "Restituisce i dettagli di un singolo ordine (righe incluse) dato il suo ID.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "order_id": {
+                        "type": "integer",
+                        "description": "L'ID numerico dell'ordine.",
+                    }
+                },
+                "required": ["order_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_warehouses",
+            "description": "Restituisce la lista di tutti i magazzini con id, nome e città.",
+            "parameters": {"type": "object", "properties": {}, "required": []},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_stock",
+            "description": (
+                "Restituisce lo stock disponibile. Se viene fornito uno SKU specifico, "
+                "restituisce solo la quantità per quello SKU; altrimenti restituisce "
+                "tutto lo stock per tutti gli SKU presenti nel DB."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "sku": {
+                        "type": "string",
+                        "description": "SKU del prodotto (opzionale). Esempi: WIDGET-1, WIDGET-2, PALLET-BOX.",
+                    }
+                },
+                "required": [],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_customers",
+            "description": (
+                "Restituisce la lista dei clienti distinti che hanno effettuato almeno un ordine, "
+                "con il numero totale di ordini per cliente."
+            ),
+            "parameters": {"type": "object", "properties": {}, "required": []},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_shipments",
+            "description": (
+                "Restituisce la lista di tutte le spedizioni con id, ordine associato, "
+                "magazzino, tracking code e stato."
+            ),
+            "parameters": {"type": "object", "properties": {}, "required": []},
+        },
+    },
+]
+
+# ---------------------------------------------------------------------------
+# Tool implementations
+# ---------------------------------------------------------------------------
+
+_MAX_TOOL_ROUNDS = 5  # prevent infinite loops
+
+
+def _execute_tool(name: str, arguments: dict) -> str:
+    """Esegue il tool richiesto dal modello e restituisce il risultato come stringa JSON."""
+    try:
+        if name == "get_orders":
+            result = orders.list_orders()
+            return json.dumps(result, ensure_ascii=False)
+
+        if name == "get_order":
+            order_id = int(arguments.get("order_id", 0))
+            result = orders.get_order(order_id)
+            if result is None:
+                return json.dumps({"error": f"Ordine #{order_id} non trovato."}, ensure_ascii=False)
+            return json.dumps(result, ensure_ascii=False)
+
+        if name == "get_warehouses":
+            result = warehouse.list_warehouses()
+            return json.dumps(result, ensure_ascii=False)
+
+        if name == "get_stock":
+            sku = arguments.get("sku", "").strip()
+            if sku:
+                qty = warehouse.get_stock(sku)
+                return json.dumps({"sku": sku, "quantity": qty}, ensure_ascii=False)
+            rows = db.query_all("SELECT sku, warehouse_id, quantity FROM stock ORDER BY sku, warehouse_id")
+            return json.dumps(rows, ensure_ascii=False)
+
+        if name == "get_customers":
+            rows = db.query_all(
+                "SELECT customer_name, COUNT(*) AS total_orders "
+                "FROM orders GROUP BY customer_name ORDER BY customer_name"
+            )
+            return json.dumps(rows, ensure_ascii=False)
+
+        if name == "get_shipments":
+            result = shipping.list_shipments()
+            return json.dumps(result, ensure_ascii=False)
+
+    except Exception as exc:  # noqa: BLE001
+        return json.dumps({"error": str(exc)}, ensure_ascii=False)
+
+    return json.dumps({"error": f"Tool '{name}' non riconosciuto."}, ensure_ascii=False)
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
 _client: WatsonxClient | None = None
 
@@ -50,7 +193,7 @@ def _get_warehouse_context() -> str:
     """Costruisce un riepilogo testuale dello stato del magazzino da passare al modello."""
     warehouses = db.query_all("SELECT id, name, city FROM warehouses ORDER BY id")
     stock_rows = db.query_all("SELECT sku, warehouse_id, quantity FROM stock ORDER BY sku, warehouse_id")
-    orders = db.query_all(
+    all_orders = db.query_all(
         "SELECT id, customer_name, status, created_at FROM orders ORDER BY id DESC LIMIT 20"
     )
     shipments = db.query_all(
@@ -71,8 +214,8 @@ def _get_warehouse_context() -> str:
         lines.append(f"  {s['sku']} @ {wh_name}: {s['quantity']} unità")
 
     lines.append("\n-- Ultimi ordini (max 20) --")
-    if orders:
-        for o in orders:
+    if all_orders:
+        for o in all_orders:
             lines.append(f"  #{o['id']} {o['customer_name']} — {o['status']} ({o['created_at']})")
     else:
         lines.append("  Nessun ordine.")
@@ -90,6 +233,11 @@ def _get_warehouse_context() -> str:
     return "\n".join(lines)
 
 
+# ---------------------------------------------------------------------------
+# Routes
+# ---------------------------------------------------------------------------
+
+
 @bp.get("/")
 def index():
     """Serve la pagina HTML del chatbot."""
@@ -99,21 +247,62 @@ def index():
 @bp.post("/chat")
 def chat():
     """
-    Invia la cronologia al modello e restituisce la risposta.
-    Se l'ultimo messaggio utente descrive un ordine, esegue una seconda chiamata
-    di estrazione e restituisce anche form_data con customer_name e lines.
+    Invia la cronologia al modello con supporto tool-calling.
+    Il modello può invocare i tool get_orders, get_order, get_warehouses,
+    get_stock, get_customers, get_shipments per recuperare dati in tempo reale.
+    Restituisce anche form_data se l'utente descrive un ordine da creare.
     """
     body = request.get_json(silent=True) or {}
     messages = body.get("messages", [])
     system_prompt = body.get("system_prompt", _DEFAULT_SYSTEM_PROMPT)
 
     client = _get_client()
+
+    # --- Tool-calling loop ---
+    # Manteniamo una copia locale della history per la conversazione con i tool.
+    # Non modifichiamo la lista originale del client per non sporcare la history
+    # visibile all'utente con i messaggi interni di tool.
+    working_messages = list(messages)
+    reply = ""
+
     try:
-        reply = client.chat(messages=messages, system_prompt=system_prompt)
+        for _ in range(_MAX_TOOL_ROUNDS):
+            msg = client.chat_with_tools(
+                messages=working_messages,
+                tools=_TOOLS,
+                system_prompt=system_prompt,
+            )
+
+            tool_calls = msg.get("tool_calls") or []
+            if not tool_calls:
+                # Risposta testuale finale
+                reply = msg.get("content", "")
+                break
+
+            # Aggiungi il messaggio assistant con i tool_calls alla history di lavoro
+            working_messages.append(msg)
+
+            # Esegui tutti i tool richiesti e aggiungi i risultati
+            for tc in tool_calls:
+                tool_name = tc["function"]["name"]
+                try:
+                    tool_args = json.loads(tc["function"].get("arguments", "{}"))
+                except json.JSONDecodeError:
+                    tool_args = {}
+
+                tool_result = _execute_tool(tool_name, tool_args)
+                working_messages.append({
+                    "role": "tool",
+                    "tool_call_id": tc["id"],
+                    "content": tool_result,
+                })
+        else:
+            reply = "Limite di iterazioni raggiunto. Riprova con una domanda più specifica."
+
     except RuntimeError as exc:
         return jsonify({"error": str(exc)}), 502
 
-    # Estrazione strutturata (seconda chiamata) per pre-popolare il form ordine
+    # --- Estrazione strutturata (seconda chiamata) per pre-popolare il form ordine ---
     user_text = next((m["content"] for m in reversed(messages) if m.get("role") == "user"), "")
     form_data = None
     if user_text:

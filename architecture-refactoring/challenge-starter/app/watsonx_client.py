@@ -45,6 +45,51 @@ class WatsonxClient:
             self._token = get_iam_token(self.api_key)
         return self._token
 
+    def _call(self, payload_messages: list, tools: Optional[list] = None) -> dict:
+        """
+        Esegue una singola chiamata HTTP all'API watsonx e restituisce il dict ``message``
+        del primo ``choice``. Gestisce il refresh automatico del token 401.
+        """
+        token = self._ensure_token()
+        endpoint = f"{self.url}/ml/v1/text/chat?version=2024-05-31"
+        payload: dict = {
+            "model_id": self.model_id,
+            "project_id": self.project_id,
+            "messages": payload_messages,
+            "parameters": {
+                "max_new_tokens": 1024,
+                "temperature": 0.7,
+            },
+        }
+        if tools:
+            payload["tools"] = tools
+            payload["tool_choice"] = "auto"
+
+        def _do_request(auth_token: str):
+            return requests.post(
+                endpoint,
+                headers={
+                    "Authorization": f"Bearer {auth_token}",
+                    "Content-Type": "application/json",
+                },
+                json=payload,
+                timeout=180,
+            )
+
+        response = _do_request(token)
+        if response.status_code == 401:
+            self._token = get_iam_token(self.api_key)
+            response = _do_request(self._token)
+        try:
+            response.raise_for_status()
+        except requests.HTTPError as exc:
+            raise RuntimeError(
+                f"Errore watsonx API: {exc.response.status_code} — {exc.response.text}"
+            ) from exc
+
+        data = response.json()
+        return data["choices"][0]["message"]
+
     def chat(self, messages: list, system_prompt: Optional[str] = None) -> str:
         """
         Invia una lista di messaggi al modello e restituisce la risposta testuale.
@@ -56,50 +101,26 @@ class WatsonxClient:
         Returns:
             Testo della risposta del modello.
         """
-        token = self._ensure_token()
-
         payload_messages = []
         if system_prompt:
             payload_messages.append({"role": "system", "content": system_prompt})
         payload_messages.extend(messages)
+        return self._call(payload_messages)["content"]
 
-        endpoint = f"{self.url}/ml/v1/text/chat?version=2024-05-31"
-        payload = {
-            "model_id": self.model_id,
-            "project_id": self.project_id,
-            "messages": payload_messages,
-            "parameters": {
-                "max_new_tokens": 1024,
-                "temperature": 0.7,
-            },
-        }
+    def chat_with_tools(
+        self,
+        messages: list,
+        tools: list,
+        system_prompt: Optional[str] = None,
+    ) -> dict:
+        """
+        Invia messaggi al modello con definizioni di tool (function-calling).
 
-        try:
-            response = requests.post(
-                endpoint,
-                headers={
-                    "Authorization": f"Bearer {token}",
-                    "Content-Type": "application/json",
-                },
-                json=payload,
-                timeout=180,
-            )
-            if response.status_code == 401:
-                self._token = get_iam_token(self.api_key)
-                response = requests.post(
-                    endpoint,
-                    headers={
-                        "Authorization": f"Bearer {self._token}",
-                        "Content-Type": "application/json",
-                    },
-                    json=payload,
-                    timeout=180,
-                )
-            response.raise_for_status()
-        except requests.HTTPError as exc:
-            raise RuntimeError(
-                f"Errore watsonx API: {exc.response.status_code} — {exc.response.text}"
-            ) from exc
-
-        data = response.json()
-        return data["choices"][0]["message"]["content"]
+        Returns:
+            Il dict ``message`` del modello (può contenere ``tool_calls`` oppure ``content``).
+        """
+        payload_messages = []
+        if system_prompt:
+            payload_messages.append({"role": "system", "content": system_prompt})
+        payload_messages.extend(messages)
+        return self._call(payload_messages, tools=tools)
