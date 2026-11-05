@@ -1,0 +1,7 @@
+
+alcuni suggerimenti per i diagrammi:
+Vista Logica        → Class Diagram, Package Diagram
+Vista dei Processi  → Sequence Diagram, Activity Diagram, State Machine
+Vista Fisica        → Deployment Diagram
+Vista dei Componenti→ Component Diagram
+Vista dei Requisiti → Use Case Diagram
