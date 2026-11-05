@@ -13,4 +13,7 @@ EXPOSE 8080
 ENV WATSONX_URL=https://us-south.ml.cloud.ibm.com
 ENV WATSONX_MODEL_ID=openai/gpt-oss-120b
 
-CMD ["gunicorn", "main:app", "--bind", "0.0.0.0:8080", "--workers", "4", "--timeout", "200"]
+# SQLite :memory: is per-process: multiple workers each get an isolated DB.
+# The app already uses threading.Lock for thread safety, so 1 worker + threads
+# is the correct concurrency model for this in-memory architecture.
+CMD ["gunicorn", "main:app", "--bind", "0.0.0.0:8080", "--workers", "1", "--threads", "4", "--timeout", "200"]
