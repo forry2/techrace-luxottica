@@ -41,18 +41,17 @@ class WatsonxClient:
         self._token: Optional[str] = None
 
     def _ensure_token(self) -> str:
-        """Recupera (o rinnova) il token IAM."""
         if not self._token:
             self._token = get_iam_token(self.api_key)
         return self._token
 
-    def chat(self, messages: list[dict], system_prompt: Optional[str] = None) -> str:
+    def chat(self, messages: list, system_prompt: Optional[str] = None) -> str:
         """
         Invia una lista di messaggi al modello e restituisce la risposta testuale.
 
         Args:
             messages: Lista di dict {"role": "user"|"assistant", "content": "..."}
-            system_prompt: Prompt di sistema opzionale per personalizzare il comportamento.
+            system_prompt: Prompt di sistema opzionale.
 
         Returns:
             Testo della risposta del modello.
@@ -83,10 +82,9 @@ class WatsonxClient:
                     "Content-Type": "application/json",
                 },
                 json=payload,
-                timeout=60,
+                timeout=180,
             )
             if response.status_code == 401:
-                # Token scaduto — rinnova e riprova una volta
                 self._token = get_iam_token(self.api_key)
                 response = requests.post(
                     endpoint,
@@ -95,11 +93,13 @@ class WatsonxClient:
                         "Content-Type": "application/json",
                     },
                     json=payload,
-                    timeout=60,
+                    timeout=180,
                 )
             response.raise_for_status()
         except requests.HTTPError as exc:
-            raise RuntimeError(f"Errore watsonx API: {exc.response.status_code} — {exc.response.text}") from exc
+            raise RuntimeError(
+                f"Errore watsonx API: {exc.response.status_code} — {exc.response.text}"
+            ) from exc
 
         data = response.json()
         return data["choices"][0]["message"]["content"]

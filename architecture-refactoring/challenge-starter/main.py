@@ -1,15 +1,20 @@
+import os
+
+from dotenv import load_dotenv
 from flask import Flask, jsonify, request
 
 from app import db, orders, shipping, warehouse
 from app.orders import StockError
 from app.validators import validate_order_payload
 
+load_dotenv()
+
 
 def create_app():
     db.init_db()
     warehouse.initialize_stock_cache()
 
-    flask_app = Flask(__name__)
+    flask_app = Flask(__name__, template_folder="app/templates")
 
     @flask_app.get("/warehouses")
     def get_warehouses():
@@ -69,6 +74,10 @@ def create_app():
     @flask_app.get("/shipments")
     def get_shipments():
         return jsonify(shipping.list_shipments())
+
+    # Registra il blueprint del chatbot/assistente AI (opzionale se credenziali assenti)
+    from app.assistant import bp as assistant_bp  # noqa: PLC0415
+    flask_app.register_blueprint(assistant_bp)
 
     return flask_app
 

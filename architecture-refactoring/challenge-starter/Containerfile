@@ -1,0 +1,16 @@
+FROM docker.io/library/python:3.12-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY main.py .
+COPY app/ app/
+
+EXPOSE 8080
+
+ENV WATSONX_URL=https://us-south.ml.cloud.ibm.com
+ENV WATSONX_MODEL_ID=openai/gpt-oss-120b
+
+CMD ["gunicorn", "main:app", "--bind", "0.0.0.0:8080", "--workers", "4", "--timeout", "200"]
