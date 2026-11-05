@@ -718,16 +718,10 @@
         const data = await res.json();
         history.push({ role: 'assistant', content: data.reply });
         addMessage('assistant', data.reply);
-        if (data.actions_done && data.actions_done.length > 0) {
-          // Watson ha eseguito azioni dirette → refresha le viste interessate
-          const tools = data.actions_done.map(a => a.tool);
-          if (tools.includes('create_order')) {
-            await loadOrders();
-          }
-          if (tools.includes('restock_sku')) {
-            await loadStock();
-          }
-        }
+        // Ricarica sempre ordini e stock dopo ogni risposta del chatbot:
+        // il bot può aver creato ordini o modificato lo stock in questa chiamata.
+        await loadOrders();
+        await loadStock();
       } catch (err) {
         addMessage('error', `Errore: ${err.message}`);
       } finally {
