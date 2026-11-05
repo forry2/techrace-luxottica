@@ -250,6 +250,38 @@
   .mini-list li:last-child { border-bottom: none; }
   .mini-list li strong { color: #c5cae9; display: block; font-size: 12.5px; }
 
+  .diagram {
+    background: #0a1430;
+    border: 1px solid #1e3060;
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .diagram svg { width: 100%; height: auto; display: block; }
+  .diagram .box-label { font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: #5c6bc0; margin-bottom: 4px; }
+  .diagram .box-title { font-size: 14px; font-weight: 700; color: #c5cae9; margin-bottom: 10px; }
+  .diagram .note { font-size: 11.5px; color: #7986cb; line-height: 1.5; margin-top: 10px; }
+
+  .layer {
+    border: 1px dashed #2c3d7a;
+    border-radius: 8px;
+    padding: 8px 10px;
+  }
+  .layer-label { font-size: 9.5px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: #5c6bc0; margin-bottom: 6px; }
+  .mods { display: flex; flex-wrap: wrap; gap: 6px; }
+  .mod {
+    background: #1a2460;
+    border: 1px solid #3949ab;
+    color: #c5cae9;
+    font-family: ui-monospace, Menlo, monospace;
+    font-size: 11px;
+    padding: 4px 8px;
+    border-radius: 6px;
+  }
+  .mod small { display: block; font-family: 'Segoe UI', system-ui, sans-serif; font-size: 10px; color: #7986cb; }
+  .mod.state { background: #1a0a3e; border-color: #6a1b9a; color: #ce93d8; }
+  .mod.removed { background: transparent; border-color: #5d2a2a; color: #ef9a9a; text-decoration: line-through; }
+  .layer-arrow { text-align: center; color: #3949ab; font-size: 14px; line-height: 1; padding: 3px 0; }
+
   .hint { text-align: center; font-size: 11px; color: #2a3460; margin-top: 10px; }
 
   @media (max-width: 600px) {
@@ -267,10 +299,12 @@
   <button onclick="showSlide(0)" class="active">① Copertina</button>
   <button onclick="showSlide(1)">② Problema</button>
   <button onclick="showSlide(2)">③ Approccio</button>
-  <button onclick="showSlide(3)">④ Bob in azione</button>
-  <button onclick="showSlide(4)">⑤ Sfide</button>
-  <button onclick="showSlide(5)">⑥ Prossimi passi</button>
-  <button onclick="showSlide(6)">⑦ SMS2 con Bob</button>
+  <button onclick="showSlide(3)">④ Architettura prima</button>
+  <button onclick="showSlide(4)">⑤ Architettura dopo</button>
+  <button onclick="showSlide(5)">⑥ Bob in azione</button>
+  <button onclick="showSlide(6)">⑦ Sfide</button>
+  <button onclick="showSlide(7)">⑧ Prossimi passi</button>
+  <button onclick="showSlide(8)">⑨ SMS2 con Bob</button>
 </div>
 
 <div class="slides">
@@ -313,7 +347,7 @@
   <div class="slide" id="s1">
     <div class="topbar">
       <span class="brand">tech RACE · IBM Bob</span>
-      <span class="slidenum">1 / 6 — Problema</span>
+      <span class="slidenum">1 / 7 — Problema</span>
     </div>
     <div class="card">
       <div class="slide-label">Il problema</div>
@@ -351,7 +385,7 @@
   <div class="slide" id="s2">
     <div class="topbar">
       <span class="brand">tech RACE · IBM Bob</span>
-      <span class="slidenum">2 / 6 — Approccio</span>
+      <span class="slidenum">2 / 7 — Approccio</span>
     </div>
     <div class="card">
       <div class="slide-label">L'approccio</div>
@@ -412,11 +446,200 @@
     </div>
   </div>
 
+  <!-- SLIDE 3 — ARCHITETTURA -->
+  <div class="slide" id="s-arch">
+    <div class="topbar">
+      <span class="brand">tech RACE · IBM Bob</span>
+      <span class="slidenum">3 / 7 — Architettura</span>
+    </div>
+    <div class="card">
+      <div class="slide-label">L'architettura</div>
+      <h1 class="slide-title">Moduli separati,<br>stato condiviso protetto.</h1>
+      <div class="subtitle">WareFlow dopo il refactoring (M3) e il fix di concorrenza (M4), ricostruito dal codice reale.</div>
+      <div class="divider"></div>
+
+      <div class="grid2" style="margin-bottom:16px;">
+        <!-- Vista logica: layer e dipendenze -->
+        <div class="diagram">
+          <div class="box-label">Vista logica</div>
+          <div class="box-title">Layer e dipendenze dei moduli</div>
+
+          <div class="layer">
+            <div class="layer-label">HTTP · Flask :8080</div>
+            <div class="mods">
+              <span class="mod">main.py<small>route handler, 9 endpoint</small></span>
+              <span class="mod">validators.py<small>validazione payload</small></span>
+            </div>
+          </div>
+          <div class="layer-arrow">▼</div>
+          <div class="layer">
+            <div class="layer-label">Business logic</div>
+            <div class="mods">
+              <span class="mod">orders.py<small>crea · conferma · annulla</small></span>
+              <span class="mod">shipping.py<small>spedizioni, tariffe</small></span>
+              <span class="mod">warehouse.py<small>stock, check atomico</small></span>
+              <span class="mod">notifications.py<small>email cliente</small></span>
+            </div>
+          </div>
+          <div class="layer-arrow">▼</div>
+          <div class="layer">
+            <div class="layer-label">Infrastruttura e stato in-process</div>
+            <div class="mods">
+              <span class="mod">db.py<small>accesso SQLite</small></span>
+              <span class="mod">utils.py<small>solo log_event</small></span>
+              <span class="mod state">_STOCK_CACHE<small>protetto da _stock_lock</small></span>
+              <span class="mod state">SQLite :memory:<small>protetto da _db_lock</small></span>
+            </div>
+          </div>
+
+          <div class="note">
+            Dipendenze solo verso il basso: <strong style="color:#81c784;">0 cicli</strong> (verificato con <code>detect_cycles.py</code>).<br>
+            Rimossi: <span class="mod removed">legacy_fax.py</span> <span class="mod removed">warehouse ↔ orders</span>
+          </div>
+        </div>
+
+        <!-- Vista dei processi: state machine ordine -->
+        <div class="diagram">
+          <div class="box-label">Vista dei processi</div>
+          <div class="box-title">Ciclo di vita di un ordine</div>
+          <svg viewBox="0 0 380 190" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, system-ui, sans-serif">
+            <defs>
+              <marker id="arrSm" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M0,0 L10,5 L0,10 z" fill="#5c6bc0"/>
+              </marker>
+            </defs>
+            <circle cx="16" cy="95" r="7" fill="#7986cb"/>
+            <line x1="23" y1="95" x2="58" y2="95" stroke="#5c6bc0" stroke-width="1.5" marker-end="url(#arrSm)"/>
+            <text x="40" y="84" fill="#7986cb" font-size="9" text-anchor="middle">POST /orders</text>
+
+            <rect x="60" y="76" width="86" height="38" rx="8" fill="#1a2460" stroke="#3949ab"/>
+            <text x="103" y="100" fill="#e8eaf6" font-size="13" font-weight="700" text-anchor="middle">DRAFT</text>
+
+            <rect x="250" y="22" width="120" height="38" rx="8" fill="#0a2a1a" stroke="#2e7d32"/>
+            <text x="310" y="46" fill="#81c784" font-size="13" font-weight="700" text-anchor="middle">CONFIRMED</text>
+
+            <rect x="250" y="130" width="120" height="38" rx="8" fill="#2a0f14" stroke="#8e3a3a"/>
+            <text x="310" y="154" fill="#ef9a9a" font-size="13" font-weight="700" text-anchor="middle">CANCELLED</text>
+
+            <path d="M146,88 C190,70 210,48 248,42" fill="none" stroke="#5c6bc0" stroke-width="1.5" marker-end="url(#arrSm)"/>
+            <text x="180" y="30" fill="#c5cae9" font-size="10" text-anchor="middle">/confirm</text>
+            <text x="180" y="42" fill="#ce93d8" font-size="9" text-anchor="middle">[stock ok, sotto lock]</text>
+
+            <path d="M146,102 C190,120 210,142 248,148" fill="none" stroke="#5c6bc0" stroke-width="1.5" marker-end="url(#arrSm)"/>
+            <text x="190" y="142" fill="#c5cae9" font-size="10" text-anchor="middle">/cancel</text>
+          </svg>
+          <div class="note">
+            Alla conferma: decremento stock atomico, spedizione creata in stato <code>PENDING</code>, notifica al cliente.
+          </div>
+
+          <div class="layer" style="margin-top:14px;">
+            <div class="layer-label">Vista fisica</div>
+            <div class="note" style="margin-top:0;">
+              Un solo processo Python, Flask <code>threaded=True</code>: un thread per richiesta. Per questo entrambi gli stati condivisi hanno un lock dedicato.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sequence diagram: confirm -->
+      <div class="diagram">
+        <div class="box-label">Flusso critico</div>
+        <div class="box-title">Sequenza di <code>POST /orders/{id}/confirm</code> dopo il fix di concorrenza</div>
+        <svg viewBox="0 0 820 385" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, system-ui, sans-serif">
+          <defs>
+            <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="#7986cb"/>
+            </marker>
+          </defs>
+
+          <!-- loop frame -->
+          <rect x="228" y="148" width="290" height="82" rx="4" fill="none" stroke="#3949ab" stroke-dasharray="4 3"/>
+          <rect x="228" y="148" width="92" height="16" fill="#1a2460"/>
+          <text x="234" y="160" fill="#9fa8da" font-size="9.5" font-weight="700">loop per riga</text>
+
+          <!-- participants -->
+          <g font-size="11" font-weight="700" text-anchor="middle">
+            <rect x="10" y="8" width="80" height="28" rx="6" fill="#1a2460" stroke="#3949ab"/>
+            <text x="50" y="26" fill="#e8eaf6">Client</text>
+            <rect x="120" y="8" width="90" height="28" rx="6" fill="#1a2460" stroke="#3949ab"/>
+            <text x="165" y="26" fill="#e8eaf6">main.py</text>
+            <rect x="235" y="8" width="90" height="28" rx="6" fill="#1a2460" stroke="#3949ab"/>
+            <text x="280" y="26" fill="#e8eaf6">orders.py</text>
+            <rect x="350" y="8" width="100" height="28" rx="6" fill="#1a0a3e" stroke="#6a1b9a"/>
+            <text x="400" y="26" fill="#ce93d8">warehouse.py</text>
+            <rect x="475" y="8" width="90" height="28" rx="6" fill="#1a2460" stroke="#3949ab"/>
+            <text x="520" y="26" fill="#e8eaf6">db.py</text>
+            <rect x="590" y="8" width="100" height="28" rx="6" fill="#1a2460" stroke="#3949ab"/>
+            <text x="640" y="26" fill="#e8eaf6">shipping.py</text>
+            <rect x="705" y="8" width="110" height="28" rx="6" fill="#1a2460" stroke="#3949ab"/>
+            <text x="760" y="26" fill="#e8eaf6">notifications.py</text>
+          </g>
+
+          <!-- lifelines -->
+          <g stroke="#2c3d7a" stroke-dasharray="3 4">
+            <line x1="50" y1="36" x2="50" y2="378"/>
+            <line x1="165" y1="36" x2="165" y2="378"/>
+            <line x1="280" y1="36" x2="280" y2="378"/>
+            <line x1="400" y1="36" x2="400" y2="378"/>
+            <line x1="520" y1="36" x2="520" y2="378"/>
+            <line x1="640" y1="36" x2="640" y2="378"/>
+            <line x1="760" y1="36" x2="760" y2="378"/>
+          </g>
+
+          <!-- lock activation on warehouse -->
+          <rect x="393" y="172" width="14" height="44" fill="#6a1b9a" opacity="0.85"/>
+          <rect x="412" y="170" width="100" height="48" rx="5" fill="#1a0a3e" stroke="#6a1b9a"/>
+          <text x="462" y="184" fill="#ce93d8" font-size="9.5" font-weight="700" text-anchor="middle">_stock_lock</text>
+          <text x="462" y="197" fill="#b39ddb" font-size="9" text-anchor="middle">leggi · verifica</text>
+          <text x="462" y="209" fill="#b39ddb" font-size="9" text-anchor="middle">decrementa · rilascia</text>
+
+          <!-- messages -->
+          <g stroke="#7986cb" stroke-width="1.4" fill="none">
+            <line x1="50" y1="62" x2="163" y2="62" marker-end="url(#arr)"/>
+            <line x1="165" y1="88" x2="278" y2="88" marker-end="url(#arr)"/>
+            <line x1="280" y1="112" x2="518" y2="112" marker-end="url(#arr)"/>
+            <line x1="520" y1="134" x2="282" y2="134" stroke-dasharray="4 3" marker-end="url(#arr)"/>
+            <line x1="280" y1="180" x2="391" y2="180" marker-end="url(#arr)"/>
+            <line x1="393" y1="212" x2="282" y2="212" stroke-dasharray="4 3" marker-end="url(#arr)"/>
+            <line x1="280" y1="252" x2="518" y2="252" marker-end="url(#arr)"/>
+            <line x1="280" y1="276" x2="638" y2="276" marker-end="url(#arr)"/>
+            <line x1="640" y1="300" x2="522" y2="300" marker-end="url(#arr)"/>
+            <line x1="280" y1="324" x2="758" y2="324" marker-end="url(#arr)"/>
+            <line x1="280" y1="348" x2="167" y2="348" stroke-dasharray="4 3" marker-end="url(#arr)"/>
+            <line x1="165" y1="370" x2="52" y2="370" stroke-dasharray="4 3" marker-end="url(#arr)"/>
+          </g>
+          <g fill="#c5cae9" font-size="10" text-anchor="middle">
+            <text x="107" y="56">POST /orders/{id}/confirm</text>
+            <text x="222" y="82">confirm_order(id)</text>
+            <text x="399" y="106">SELECT ordine + order_lines</text>
+            <text x="399" y="128" fill="#9fa8da">ordine DRAFT, lines[]</text>
+            <text x="336" y="176" font-size="9">check_and_decrement</text>
+            <text x="336" y="208" font-size="9" fill="#9fa8da">ok / StockError</text>
+            <text x="399" y="246">UPDATE status = CONFIRMED</text>
+            <text x="459" y="270">create_shipment_for_order()</text>
+            <text x="580" y="294">INSERT shipment (PENDING)</text>
+            <text x="519" y="318">notify_customer()</text>
+            <text x="222" y="342" fill="#9fa8da">order + shipment</text>
+            <text x="107" y="364" fill="#81c784">200 OK + JSON</text>
+          </g>
+        </svg>
+        <div class="note">
+          Prima del fix la lettura e il decremento di <code>_STOCK_CACHE</code> erano due operazioni separate: due thread potevano leggere lo stesso valore e uno dei due decrementi andava perso (<em>lost update</em>). Ora sono un'unica operazione sotto <code>_stock_lock</code>.
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <span class="team">Team Luxottica</span>
+        <span>Dai 7 diagrammi Mermaid di ARCHITECTURE.md</span>
+      </div>
+    </div>
+  </div>
+
   <!-- SLIDE 3 — BOB IN AZIONE -->
   <div class="slide" id="s3">
     <div class="topbar">
       <span class="brand">tech RACE · IBM Bob</span>
-      <span class="slidenum">3 / 6 — Bob in azione</span>
+      <span class="slidenum">4 / 7 — Bob in azione</span>
     </div>
     <div class="card">
       <div class="slide-label">Bob in azione</div>
@@ -458,7 +681,7 @@
   <div class="slide" id="s4">
     <div class="topbar">
       <span class="brand">tech RACE · IBM Bob</span>
-      <span class="slidenum">4 / 6 — Sfide</span>
+      <span class="slidenum">5 / 7 — Sfide</span>
     </div>
     <div class="card">
       <div class="slide-label">Le sfide</div>
@@ -500,7 +723,7 @@
   <div class="slide" id="s5">
     <div class="topbar">
       <span class="brand">tech RACE · IBM Bob</span>
-      <span class="slidenum">5 / 6 — Prossimi passi</span>
+      <span class="slidenum">6 / 7 — Prossimi passi</span>
     </div>
     <div class="card">
       <div class="slide-label">Prossimi passi</div>
@@ -552,7 +775,7 @@
   <div class="slide" id="s6">
     <div class="topbar">
       <span class="brand">tech RACE · IBM Bob</span>
-      <span class="slidenum">6 / 6 — SMS2 con Bob</span>
+      <span class="slidenum">7 / 7 — SMS2 con Bob</span>
     </div>
     <div class="card">
       <div class="slide-label">Prossimi passi · SMS2 / EssiBOX</div>
