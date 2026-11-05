@@ -1,0 +1,181 @@
+[
+  {
+    "body": null,
+    "method": "GET",
+    "name": "list_warehouses",
+    "path": "/warehouses",
+    "response": [
+      {
+        "city": "Milano",
+        "id": 1,
+        "name": "Milano Nord"
+      },
+      {
+        "city": "Bologna",
+        "id": 2,
+        "name": "Bologna Est"
+      },
+      {
+        "city": "Torino",
+        "id": 3,
+        "name": "Torino Sud"
+      }
+    ],
+    "status": 200
+  },
+  {
+    "body": null,
+    "method": "GET",
+    "name": "stock_widget1",
+    "path": "/stock/WIDGET-1",
+    "response": {
+      "quantity": 1300,
+      "sku": "WIDGET-1"
+    },
+    "status": 200
+  },
+  {
+    "body": null,
+    "method": "GET",
+    "name": "stock_widget2",
+    "path": "/stock/WIDGET-2",
+    "response": {
+      "quantity": 250,
+      "sku": "WIDGET-2"
+    },
+    "status": 200
+  },
+  {
+    "body": null,
+    "method": "GET",
+    "name": "stock_palletbox",
+    "path": "/stock/PALLET-BOX",
+    "response": {
+      "quantity": 500,
+      "sku": "PALLET-BOX"
+    },
+    "status": 200
+  },
+  {
+    "body": null,
+    "method": "GET",
+    "name": "list_orders_empty",
+    "path": "/orders",
+    "response": [],
+    "status": 200
+  },
+  {
+    "body": null,
+    "method": "GET",
+    "name": "get_missing_order",
+    "path": "/orders/999",
+    "response": {
+      "error": "not found"
+    },
+    "status": 404
+  },
+  {
+    "body": {
+      "lines": [
+        {
+          "quantity": 1,
+          "sku": "WIDGET-2"
+        }
+      ]
+    },
+    "method": "POST",
+    "name": "create_order_invalid",
+    "path": "/orders",
+    "response": {
+      "error": "customer_name is required"
+    },
+    "status": 400
+  },
+  {
+    "body": {
+      "customer_name": "Golden Master Probe",
+      "lines": [
+        {
+          "quantity": 2,
+          "sku": "WIDGET-2"
+        }
+      ]
+    },
+    "method": "POST",
+    "name": "create_order_valid",
+    "path": "/orders",
+    "response": {
+      "customer_name": "Golden Master Probe",
+      "id": 1,
+      "lines": [
+        {
+          "quantity": 2,
+          "sku": "WIDGET-2"
+        }
+      ],
+      "status": "DRAFT"
+    },
+    "status": 201
+  },
+  {
+    "body": null,
+    "method": "POST",
+    "name": "confirm_order_1",
+    "path": "/orders/1/confirm",
+    "response": {
+      "customer_name": "Golden Master Probe",
+      "id": 1,
+      "lines": [
+        {
+          "quantity": 2,
+          "sku": "WIDGET-2"
+        }
+      ],
+      "shipment": {
+        "id": 1,
+        "order_id": 1,
+        "rate": 6.4,
+        "status": "PENDING",
+        "warehouse_id": 1
+      },
+      "status": "CONFIRMED"
+    },
+    "status": 200
+  },
+  {
+    "body": null,
+    "method": "GET",
+    "name": "stock_widget2_after_confirm",
+    "path": "/stock/WIDGET-2",
+    "response": {
+      "quantity": 248,
+      "sku": "WIDGET-2"
+    },
+    "status": 200
+  },
+  {
+    "body": null,
+    "method": "POST",
+    "name": "cancel_confirmed_order_1",
+    "path": "/orders/1/cancel",
+    "response": {
+      "error": "order 1 is already confirmed, cannot cancel"
+    },
+    "status": 400
+  },
+  {
+    "body": null,
+    "method": "GET",
+    "name": "list_shipments_after",
+    "path": "/shipments",
+    "response": [
+      {
+        "id": 1,
+        "order_id": 1,
+        "status": "PENDING",
+        "warehouse_id": 1
+      }
+    ],
+    "status": 200
+  }
+]
