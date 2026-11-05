@@ -75,9 +75,13 @@ def create_app():
     def get_shipments():
         return jsonify(shipping.list_shipments())
 
-    # Registra il blueprint del chatbot/assistente AI (opzionale se credenziali assenti)
-    from app.assistant import bp as assistant_bp  # noqa: PLC0415
-    flask_app.register_blueprint(assistant_bp)
+    # Registra il blueprint del chatbot/assistente AI solo se le credenziali sono presenti.
+    # Senza WATSONX_API_KEY l'app si avvia comunque e tutti gli endpoint core restano attivi.
+    if os.environ.get("WATSONX_API_KEY"):
+        from app.assistant import bp as assistant_bp  # noqa: PLC0415
+        flask_app.register_blueprint(assistant_bp)
+    else:
+        print("[wareflow] WATSONX_API_KEY non impostata — blueprint assistant non registrato")
 
     return flask_app
 
