@@ -1,4 +1,7 @@
-from app.utils import calculate_shipping_rate, format_notification_email, log_event, validate_order_payload
+from app.notifications import format_notification_email
+from app.shipping import calculate_shipping_rate
+from app.utils import log_event
+from app.validators import validate_order_payload
 
 
 def test_validate_order_payload_rejects_missing_customer():

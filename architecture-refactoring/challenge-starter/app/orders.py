@@ -35,8 +35,6 @@ def list_orders():
 
 
 def list_pending_orders_for_sku(sku):
-    """Used by warehouse.get_reserved_quantity() - see the note there about
-    the circular import this creates."""
     rows = db.query_all(
         """
         SELECT order_lines.order_id AS order_id, order_lines.quantity AS quantity
@@ -49,10 +47,16 @@ def list_pending_orders_for_sku(sku):
     return [(row["order_id"], row["quantity"]) for row in rows]
 
 
+def get_reserved_quantity(sku):
+    """How much of this SKU is tied up in DRAFT orders that aren't shipped yet."""
+    pending = list_pending_orders_for_sku(sku)
+    return sum(line_qty for _order_id, line_qty in pending)
+
+
 def confirm_order(order_id):
     order = get_order(order_id)
     if order is None:
-        return None
+        raise StockError(f"order {order_id} not found")
     if order["status"] != "DRAFT":
         raise StockError(f"order {order_id} is already {order['status']}")
 

@@ -41,15 +41,3 @@ def decrement_stock(sku, quantity_before, quantity):
 
 def restock(sku, quantity):
     _STOCK_CACHE[sku] = _STOCK_CACHE.get(sku, 0) + quantity
-
-
-def get_reserved_quantity(sku):
-    # How much of this SKU is tied up in orders that aren't shipped yet.
-    # Deferred import: orders.py imports shipping.py, which imports this
-    # module, so a top-level import here would be a real circular import
-    # (ImportError at startup). Importing inside the function instead
-    # "works", but it means warehouse.py secretly depends on orders.py too.
-    from app.orders import list_pending_orders_for_sku
-
-    pending = list_pending_orders_for_sku(sku)
-    return sum(line_qty for _order_id, line_qty in pending)

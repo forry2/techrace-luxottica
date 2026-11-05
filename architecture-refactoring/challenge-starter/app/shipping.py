@@ -2,11 +2,18 @@ import random
 import string
 
 from app import db, warehouse
-from app.utils import calculate_shipping_rate, log_event
+from app.utils import log_event
 
 
 def _generate_tracking_code():
     return "WF-" + "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
+
+
+def calculate_shipping_rate(order, lines):
+    base_rate = 4.90
+    per_item = 0.75
+    total_items = sum(l["quantity"] for l in lines)
+    return round(base_rate + per_item * total_items, 2)
 
 
 def create_shipment_for_order(order, lines):

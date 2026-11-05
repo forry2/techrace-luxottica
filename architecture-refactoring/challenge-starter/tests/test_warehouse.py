@@ -1,5 +1,6 @@
 import app.db as db_module
 import app.warehouse as warehouse_module
+from app.orders import get_reserved_quantity
 
 
 def _reset_db():
@@ -73,5 +74,5 @@ def test_restock():
 
 def test_get_reserved_quantity_empty():
     # No DRAFT orders exist yet, so reserved qty is 0
-    qty = warehouse_module.get_reserved_quantity("WIDGET-1")
+    qty = get_reserved_quantity("WIDGET-1")
     assert qty == 0

@@ -2,7 +2,7 @@ from flask import Flask, jsonify, request
 
 from app import db, orders, shipping, warehouse
 from app.orders import StockError
-from app.utils import validate_order_payload
+from app.validators import validate_order_payload
 
 
 def create_app():
