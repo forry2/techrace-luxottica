@@ -22,9 +22,8 @@ _FORM_SKUS = ", ".join(sorted({"WIDGET-1", "WIDGET-2", "PALLET-BOX"}))
 _DEFAULT_SYSTEM_PROMPT = (
     "Sei un assistente AI per la gestione magazzino WareFlow, preciso e conciso. "
     "Puoi aiutare con ordini, stock, magazzini e spedizioni. "
-    "Quando l'utente chiede informazioni su ordini, clienti, magazzini, stock o spedizioni, "
-    "usa SEMPRE i tool disponibili per recuperare i dati aggiornati dal sistema. "
-    "Non inventare dati: usa i tool per ottenerli. "
+    "Rispondi SEMPRE basandoti ESCLUSIVAMENTE sui dati reali del magazzino che ti vengono forniti nel contesto. "
+    "Non inventare dati e non chiedere chiarimenti su quale sistema usare: i dati sono già inclusi nel contesto. "
     "Rispondi sempre nella stessa lingua in cui ti viene posta la domanda."
 )
 
@@ -247,21 +246,26 @@ def index():
 @bp.post("/chat")
 def chat():
     """
-    Invia la cronologia al modello con supporto tool-calling.
-    Il modello può invocare i tool get_orders, get_order, get_warehouses,
-    get_stock, get_customers, get_shipments per recuperare dati in tempo reale.
+    Invia la cronologia al modello.
+    Il system prompt include sempre il contesto aggiornato del magazzino (ordini, stock,
+    magazzini, spedizioni) in modo che il bot possa rispondere con dati reali.
+    Se il modello supporta il function-calling, usa i tool come canale alternativo;
+    altrimenti ha già tutto nel contesto.
     Restituisce anche form_data se l'utente descrive un ordine da creare.
     """
     body = request.get_json(silent=True) or {}
     messages = body.get("messages", [])
-    system_prompt = body.get("system_prompt", _DEFAULT_SYSTEM_PROMPT)
+    base_prompt = body.get("system_prompt", _DEFAULT_SYSTEM_PROMPT)
+
+    # Inietta sempre il contesto aggiornato nel system prompt
+    context = _get_warehouse_context()
+    system_prompt = f"{base_prompt}\n\n{context}"
 
     client = _get_client()
 
     # --- Tool-calling loop ---
-    # Manteniamo una copia locale della history per la conversazione con i tool.
-    # Non modifichiamo la lista originale del client per non sporcare la history
-    # visibile all'utente con i messaggi interni di tool.
+    # Tentiamo il function-calling; se il modello non supporta i tool_calls,
+    # risponde direttamente con content (che è già arricchito dal contesto).
     working_messages = list(messages)
     reply = ""
 
@@ -275,7 +279,7 @@ def chat():
 
             tool_calls = msg.get("tool_calls") or []
             if not tool_calls:
-                # Risposta testuale finale
+                # Risposta testuale finale (diretta o dopo tool loop)
                 reply = msg.get("content", "")
                 break
 
